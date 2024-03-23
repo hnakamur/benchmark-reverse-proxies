@@ -1,0 +1,10 @@
+[package]
+name = "benchmark-reverse-proxies"
+
+[workspace]
+resolver = "2"
+members = [
+    "hello-actix-http-server",
+    "hello-hyper-server",
+    "hello-pingora-server",
+]
