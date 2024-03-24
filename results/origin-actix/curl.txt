@@ -1,7 +1,7 @@
 HTTP/1.1 200 OK
 content-length: 14
-server: actix
 content-type: text/plain
-date: Sun, 24 Mar 2024 09:22:26 GMT
+server: actix
+date: Sun, 24 Mar 2024 12:06:31 GMT
 
 Hello, world!

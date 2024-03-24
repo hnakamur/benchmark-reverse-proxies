@@ -3,16 +3,6 @@ name = "benchmark-reverse-proxies"
 version = "0.1.0"
 edition = "2021"
 
-[workspace]
-resolver = "2"
-members = [
-    "origin-actix",
-    "origin-hyper",
-    "origin-pingora",
-    "proxy-hyper",
-    "proxy-pingora",
-]
-
 [dependencies]
 env_logger = "0.11.3"
 log = "0.4.21"

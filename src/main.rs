@@ -104,7 +104,8 @@ impl Server {
     fn spawn(&self) -> Result<Child, DynError> {
         match self {
             Server::Rust(name) => {
-                let mut server_path = PathBuf::from("target/release");
+                let mut server_path = PathBuf::from(name);
+                server_path.push("target/release");
                 server_path.push(name);
                 Ok(Command::new(server_path).spawn()?)
             }

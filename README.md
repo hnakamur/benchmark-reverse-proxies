@@ -4,6 +4,4 @@
 
 1. Install curl, nginx, and [oha](https://github.com/hatoo/oha).
 
-2. Run `cargo build --release --workspace`
-
-3. Run `cargo run --release`
+2. Run `cargo run --release`
