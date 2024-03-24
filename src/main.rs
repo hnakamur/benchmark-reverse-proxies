@@ -21,27 +21,60 @@ fn main() {
     bench_http_origin(Server::Rust(String::from("origin-hyper"))).unwrap();
     bench_http_origin(Server::Rust(String::from("origin-pingora"))).unwrap();
     bench_http_origin(Server::Nginx(String::from("origin-nginx"))).unwrap();
+
+    bench_http_proxy(
+        Server::Nginx(String::from("proxy-nginx")),
+        Server::Nginx(String::from("origin-nginx")),
+    )
+    .unwrap();
 }
 
 pub type DynError = Box<dyn Error + Send + Sync + 'static>;
 
-fn bench_http_origin(server: Server) -> Result<(), DynError> {
-    let name = server.name();
+fn bench_http_origin(origin: Server) -> Result<(), DynError> {
+    let name = origin.name();
     info!("benchmark origin: {}...", name);
-    let mut server_proc = server.spawn()?;
+    let mut origin_proc = origin.spawn()?;
 
     let mut dir = PathBuf::from("results");
     dir.push(name);
     create_dir_all(&dir)?;
 
+    let url = "http://localhost:3000";
+
     thread::sleep(Duration::from_secs(2));
-    run_curl(&dir)?;
+    run_curl(url, &dir)?;
 
     thread::sleep(Duration::from_secs(1));
-    run_oha(&dir)?;
+    run_oha(url, &dir)?;
 
-    server.kill(&mut server_proc)?;
-    wait_and_write_output(server_proc, &dir)?;
+    origin.kill(&mut origin_proc)?;
+    wait_and_write_output(origin_proc, &dir, "origin.txt")?;
+    Ok(())
+}
+
+fn bench_http_proxy(proxy: Server, origin: Server) -> Result<(), DynError> {
+    let name = proxy.name();
+    info!("benchmark proxy: {}, origin: {}...", name, origin.name());
+    let mut origin_proc = origin.spawn()?;
+    let mut proxy_proc = proxy.spawn()?;
+
+    let mut dir = PathBuf::from("results");
+    dir.push(name);
+    create_dir_all(&dir)?;
+
+    let url = "http://localhost:3001";
+
+    thread::sleep(Duration::from_secs(2));
+    run_curl(url, &dir)?;
+
+    thread::sleep(Duration::from_secs(1));
+    run_oha(url, &dir)?;
+
+    proxy.kill(&mut proxy_proc)?;
+    wait_and_write_output(proxy_proc, &dir, "proxy.txt")?;
+    origin.kill(&mut origin_proc)?;
+    wait_and_write_output(origin_proc, &dir, "origin.txt")?;
     Ok(())
 }
 
@@ -86,10 +119,8 @@ impl Server {
     }
 }
 
-fn run_curl<P: AsRef<Path>>(output_dir: P) -> Result<(), DynError> {
-    let output = Command::new("curl")
-        .args(["-sSD", "-", "http://localhost:3000"])
-        .output()?;
+fn run_curl<P: AsRef<Path>>(url: &str, output_dir: P) -> Result<(), DynError> {
+    let output = Command::new("curl").args(["-sSD", "-", url]).output()?;
     let mut path = PathBuf::from(output_dir.as_ref());
     path.push("curl.txt");
     let mut file = File::create(path)?;
@@ -97,7 +128,7 @@ fn run_curl<P: AsRef<Path>>(output_dir: P) -> Result<(), DynError> {
     Ok(())
 }
 
-fn run_oha<P: AsRef<Path>>(output_dir: P) -> Result<(), DynError> {
+fn run_oha<P: AsRef<Path>>(url: &str, output_dir: P) -> Result<(), DynError> {
     let output = Command::new("oha")
         .args([
             "--no-tui",
@@ -108,7 +139,7 @@ fn run_oha<P: AsRef<Path>>(output_dir: P) -> Result<(), DynError> {
             "15s",
             "--latency-correction",
             "--disable-keepalive",
-            "http://localhost:3000",
+            url,
         ])
         .output()?;
     let mut path = PathBuf::from(output_dir.as_ref());
@@ -118,10 +149,14 @@ fn run_oha<P: AsRef<Path>>(output_dir: P) -> Result<(), DynError> {
     Ok(())
 }
 
-fn wait_and_write_output<P: AsRef<Path>>(proc: Child, output_dir: P) -> Result<(), DynError> {
+fn wait_and_write_output<P: AsRef<Path>, P2: AsRef<Path>>(
+    proc: Child,
+    output_dir: P,
+    filename: P2,
+) -> Result<(), DynError> {
     let output = proc.wait_with_output()?;
     let mut path = PathBuf::from(output_dir.as_ref());
-    path.push("server.txt");
+    path.push(filename.as_ref());
     let mut file = File::create(path)?;
     file.write_all(&output.stdout)?;
     Ok(())
