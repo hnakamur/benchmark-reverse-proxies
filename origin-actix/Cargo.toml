@@ -1,5 +1,5 @@
 [package]
-name = "hello-actix-http-server"
+name = "origin-actix"
 version = "0.1.0"
 edition = "2021"
 

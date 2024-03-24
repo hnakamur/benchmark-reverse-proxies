@@ -1,3 +1,8 @@
+use log::info;
+use nix::{
+    sys::signal::{kill, Signal::SIGTERM},
+    unistd::Pid,
+};
 use std::{
     env,
     error::Error,
@@ -10,15 +15,18 @@ use std::{
 };
 
 fn main() {
-    bench_http_server("hello-actix-http-server").unwrap();
-    bench_http_server("hello-hyper-server").unwrap();
-    bench_http_server("hello-pingora-server").unwrap();
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+
+    bench_http_server("origin-actix").unwrap();
+    bench_http_server("origin-hyper").unwrap();
+    bench_http_server("origin-pingora").unwrap();
     bench_http_server("nginx").unwrap();
 }
 
 pub type DynError = Box<dyn Error + Send + Sync + 'static>;
 
 fn bench_http_server(name: &str) -> Result<(), DynError> {
+    info!("benchmark origin: {}...", name);
     let mut server = if name == "nginx" {
         let mut path = env::current_dir()?;
         path.push("config/nginx.conf");
@@ -64,7 +72,11 @@ fn bench_http_server(name: &str) -> Result<(), DynError> {
     let mut file = File::create(path)?;
     file.write_all(&output.stdout)?;
 
-    server.kill()?;
+    if name == "nginx" {
+        kill(Pid::from_raw(server.id() as i32), SIGTERM)?;
+    } else {
+        server.kill()?;
+    }
     let output = server.wait_with_output()?;
     let mut path = dir.clone();
     path.push("server.txt");

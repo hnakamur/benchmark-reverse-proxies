@@ -1,5 +1,5 @@
 [package]
-name = "hello-hyper-server"
+name = "origin-hyper"
 version = "0.1.0"
 edition = "2021"
 

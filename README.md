@@ -6,4 +6,4 @@
 
 2. Run `cargo build --release --workspace`
 
-3. Run `cargo run`
+3. Run `cargo run --release`

@@ -303,7 +303,12 @@ checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 
 [[package]]
 name = "benchmark-reverse-proxies"
-version = "0.0.0"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "log",
+ "nix 0.28.0",
+]
 
 [[package]]
 name = "bitflags"
@@ -374,6 +379,12 @@ name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
+name = "cfg_aliases"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd16c4719339c4530435d38e511904438d07cce7950afa3718a84ac36c10e89e"
 
 [[package]]
 name = "chrono"
@@ -756,37 +767,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hello-actix-http-server"
-version = "0.1.0"
-dependencies = [
- "actix-http",
- "actix-rt",
- "actix-server",
- "env_logger",
- "tracing",
-]
-
-[[package]]
-name = "hello-hyper-server"
-version = "0.1.0"
-dependencies = [
- "http-body-util",
- "hyper 1.2.0",
- "hyper-util",
- "tokio",
-]
-
-[[package]]
-name = "hello-pingora-server"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "bytes",
- "http 1.1.0",
- "pingora",
-]
-
-[[package]]
 name = "hermit-abi"
 version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1157,6 +1137,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nix"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab2156c4fce2f8df6c499cc1c763e4394b7482525bf2a9701c9d79d215f519e4"
+dependencies = [
+ "bitflags 2.5.0",
+ "cfg-if",
+ "cfg_aliases",
+ "libc",
+]
+
+[[package]]
 name = "num-conv"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1248,6 +1240,37 @@ dependencies = [
  "openssl-src",
  "pkg-config",
  "vcpkg",
+]
+
+[[package]]
+name = "origin-actix"
+version = "0.1.0"
+dependencies = [
+ "actix-http",
+ "actix-rt",
+ "actix-server",
+ "env_logger",
+ "tracing",
+]
+
+[[package]]
+name = "origin-hyper"
+version = "0.1.0"
+dependencies = [
+ "http-body-util",
+ "hyper 1.2.0",
+ "hyper-util",
+ "tokio",
+]
+
+[[package]]
+name = "origin-pingora"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "http 1.1.0",
+ "pingora",
 ]
 
 [[package]]
@@ -1348,7 +1371,7 @@ dependencies = [
  "libc",
  "log",
  "lru",
- "nix",
+ "nix 0.24.3",
  "once_cell",
  "openssl-probe",
  "parking_lot",
