@@ -1,21 +1,28 @@
-use std::convert::Infallible;
 use std::net::SocketAddr;
 
+use http::{Request, Response, Uri};
+use hyper::body::Incoming;
+use hyper::client::conn;
 use hyper::header::{HeaderValue, SERVER};
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
-use hyper::{Request, Response};
 use hyper_util::rt::TokioIo;
-use once_cell::sync::Lazy;
-use reqwest::Body;
-use tokio::net::TcpListener;
+use tokio::net::{TcpListener, TcpStream};
 
-static CLIENT: Lazy<reqwest::Client> = Lazy::new(reqwest::Client::new);
-
-async fn hello(_client_req: Request<hyper::body::Incoming>) -> Result<Response<Body>, Infallible> {
-    // TODO: Set url path and request headers
-    let res = CLIENT.get("http://localhost:3000").send().await.unwrap();
-    let mut res: http::Response<Body> = res.into();
+async fn hello(
+    req: Request<Incoming>,
+) -> Result<Response<Incoming>, Box<dyn std::error::Error + Send + Sync>> {
+    let mut req = req;
+    *req.uri_mut() = "http://localhost:3000".parse::<Uri>().unwrap();
+    let stream = TcpStream::connect(req.uri().authority().unwrap().as_str()).await?;
+    let io = TokioIo::new(stream);
+    let (mut sender, conn) = conn::http1::handshake(io).await?;
+    tokio::task::spawn(async move {
+        if let Err(err) = conn.await {
+            println!("Connection failed: {:?}", err);
+        }
+    });
+    let mut res = sender.send_request(req).await?;
     let headers = res.headers_mut();
     headers.insert(SERVER, HeaderValue::from_static("hyper"));
     Ok(res)
