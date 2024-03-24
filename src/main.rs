@@ -17,19 +17,19 @@ use std::{
 fn main() {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    bench_http_server("origin-actix").unwrap();
-    bench_http_server("origin-hyper").unwrap();
-    bench_http_server("origin-pingora").unwrap();
-    bench_http_server("nginx").unwrap();
+    bench_http_origin("origin-actix").unwrap();
+    bench_http_origin("origin-hyper").unwrap();
+    bench_http_origin("origin-pingora").unwrap();
+    bench_http_origin("origin-nginx").unwrap();
 }
 
 pub type DynError = Box<dyn Error + Send + Sync + 'static>;
 
-fn bench_http_server(name: &str) -> Result<(), DynError> {
+fn bench_http_origin(name: &str) -> Result<(), DynError> {
     info!("benchmark origin: {}...", name);
-    let mut server = if name == "nginx" {
+    let mut server = if name == "origin-nginx" {
         let mut path = env::current_dir()?;
-        path.push("config/nginx.conf");
+        path.push("origin-nginx/nginx.conf");
         let path = path.into_os_string().into_string().unwrap();
         Command::new("/usr/sbin/nginx")
             .args(["-c", &path, "-g", "daemon off;"])
@@ -72,7 +72,7 @@ fn bench_http_server(name: &str) -> Result<(), DynError> {
     let mut file = File::create(path)?;
     file.write_all(&output.stdout)?;
 
-    if name == "nginx" {
+    if name == "origin-nginx" {
         kill(Pid::from_raw(server.id() as i32), SIGTERM)?;
     } else {
         server.kill()?;
