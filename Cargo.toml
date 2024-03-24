@@ -8,7 +8,7 @@ resolver = "2"
 members = [
     "origin-actix",
     "origin-hyper",
-    "origin-pingora",
+    "origin-pingora", "proxy-pingora",
 ]
 
 [dependencies]
