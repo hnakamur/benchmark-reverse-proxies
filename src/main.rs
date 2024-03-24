@@ -23,6 +23,11 @@ fn main() {
     bench_http_origin(Server::Nginx(String::from("origin-nginx"))).unwrap();
 
     bench_http_proxy(
+        Server::Rust(String::from("proxy-hyper")),
+        Server::Nginx(String::from("origin-nginx")),
+    )
+    .unwrap();
+    bench_http_proxy(
         Server::Rust(String::from("proxy-pingora")),
         Server::Nginx(String::from("origin-nginx")),
     )
