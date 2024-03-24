@@ -17,31 +17,31 @@ use std::{
 fn main() {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    bench_http_origin(Server::Rust(String::from("origin-actix"))).unwrap();
-    bench_http_origin(Server::Rust(String::from("origin-hyper"))).unwrap();
-    bench_http_origin(Server::Rust(String::from("origin-pingora"))).unwrap();
-    bench_http_origin(Server::Nginx(String::from("origin-nginx"))).unwrap();
+    let origins = [
+        Server::Rust(String::from("origin-actix")),
+        Server::Rust(String::from("origin-hyper")),
+        Server::Rust(String::from("origin-pingora")),
+        Server::Nginx(String::from("origin-nginx")),
+    ];
+    for origin in origins {
+        bench_http_origin(&origin).unwrap();
+    }
 
-    bench_http_proxy(
+    let proxies = [
+        Server::Rust(String::from("proxy-actix")),
         Server::Rust(String::from("proxy-hyper")),
-        Server::Nginx(String::from("origin-nginx")),
-    )
-    .unwrap();
-    bench_http_proxy(
         Server::Rust(String::from("proxy-pingora")),
-        Server::Nginx(String::from("origin-nginx")),
-    )
-    .unwrap();
-    bench_http_proxy(
         Server::Nginx(String::from("proxy-nginx")),
-        Server::Nginx(String::from("origin-nginx")),
-    )
-    .unwrap();
+    ];
+    let origin = Server::Nginx(String::from("origin-nginx"));
+    for proxy in proxies {
+        bench_http_proxy(&proxy, &origin).unwrap();
+    }
 }
 
 pub type DynError = Box<dyn Error + Send + Sync + 'static>;
 
-fn bench_http_origin(origin: Server) -> Result<(), DynError> {
+fn bench_http_origin(origin: &Server) -> Result<(), DynError> {
     let name = origin.name();
     info!("benchmark origin: {}...", name);
     let mut origin_proc = origin.spawn()?;
@@ -63,7 +63,7 @@ fn bench_http_origin(origin: Server) -> Result<(), DynError> {
     Ok(())
 }
 
-fn bench_http_proxy(proxy: Server, origin: Server) -> Result<(), DynError> {
+fn bench_http_proxy(proxy: &Server, origin: &Server) -> Result<(), DynError> {
     let name = proxy.name();
     info!("benchmark proxy: {}, origin: {}...", name, origin.name());
     let mut origin_proc = origin.spawn()?;

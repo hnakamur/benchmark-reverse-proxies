@@ -5,6 +5,7 @@ fn main() {
         "origin-actix",
         "origin-hyper",
         "origin-pingora",
+        "proxy-actix",
         "proxy-hyper",
         "proxy-pingora",
     ];
