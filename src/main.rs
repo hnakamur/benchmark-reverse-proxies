@@ -56,7 +56,10 @@ fn bench_http_origin(origin: &Server) -> Result<(), DynError> {
     run_curl(url, &dir)?;
 
     thread::sleep(Duration::from_secs(1));
-    run_oha(url, &dir)?;
+    run_oha(url, &dir, false)?;
+
+    thread::sleep(Duration::from_secs(1));
+    run_oha(url, &dir, true)?;
 
     origin.kill(&mut origin_proc)?;
     wait_and_write_output(origin_proc, &dir, "origin.txt")?;
@@ -79,7 +82,10 @@ fn bench_http_proxy(proxy: &Server, origin: &Server) -> Result<(), DynError> {
     run_curl(url, &dir)?;
 
     thread::sleep(Duration::from_secs(1));
-    run_oha(url, &dir)?;
+    run_oha(url, &dir, false)?;
+
+    thread::sleep(Duration::from_secs(1));
+    run_oha(url, &dir, true)?;
 
     proxy.kill(&mut proxy_proc)?;
     wait_and_write_output(proxy_proc, &dir, "proxy.txt")?;
@@ -139,22 +145,28 @@ fn run_curl<P: AsRef<Path>>(url: &str, output_dir: P) -> Result<(), DynError> {
     Ok(())
 }
 
-fn run_oha<P: AsRef<Path>>(url: &str, output_dir: P) -> Result<(), DynError> {
-    let output = Command::new("oha")
-        .args([
-            "--no-tui",
-            "--json",
-            "-c",
-            "100",
-            "-z",
-            "15s",
-            "--latency-correction",
-            "--disable-keepalive",
-            url,
-        ])
-        .output()?;
+fn run_oha<P: AsRef<Path>>(url: &str, output_dir: P, keepalive: bool) -> Result<(), DynError> {
+    let mut args = vec![
+        "--no-tui",
+        "--json",
+        "-c",
+        "100",
+        "-z",
+        "15s",
+        "--latency-correction",
+    ];
+    if !keepalive {
+        args.push("--disable-keepalive");
+    }
+    args.push(url);
+    let output = Command::new("oha").args(args).output()?;
     let mut path = PathBuf::from(output_dir.as_ref());
-    path.push("oha.json");
+    let filename = if keepalive {
+        "oha-keepalive.json"
+    } else {
+        "oha-no-keepalive.json"
+    };
+    path.push(filename);
     let mut file = File::create(path)?;
     file.write_all(&output.stdout)?;
     Ok(())
