@@ -13,6 +13,7 @@ async fn main() -> io::Result<()> {
     env_logger::init();
 
     ntex::server::build()
+        .backlog(1024)
         .bind("hello-world", "127.0.0.1:3000", |cfg| {
             cfg.memory_pool(PoolId::P1);
             PoolId::P1.set_read_params(65535, 2048);
