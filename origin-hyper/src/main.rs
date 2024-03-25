@@ -8,13 +8,18 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Request, Response};
 use hyper_util::rt::TokioIo;
+use once_cell::sync::Lazy;
 use tokio::net::TcpListener;
 
+static HYPER: HeaderValue = HeaderValue::from_static("hyper");
+static TEXT_PLAIN: HeaderValue = HeaderValue::from_static("text/plain");
+static BODY_BYTES: Lazy<Bytes> = Lazy::new(|| Bytes::from("Hello, world!\n"));
+
 async fn hello(_: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
-    let mut res = Response::new(Full::new(Bytes::from("Hello, world!\n")));
+    let mut res = Response::new(Full::new(BODY_BYTES.clone()));
     let headers = res.headers_mut();
-    headers.insert(SERVER, HeaderValue::from_static("hyper"));
-    headers.insert(CONTENT_TYPE, HeaderValue::from_static("text/plain"));
+    headers.insert(SERVER, HYPER.clone());
+    headers.insert(CONTENT_TYPE, TEXT_PLAIN.clone());
     Ok(res)
 }
 
