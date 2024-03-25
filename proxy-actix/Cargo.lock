@@ -923,6 +923,7 @@ dependencies = [
  "actix-web",
  "awc",
  "env_logger",
+ "once_cell",
  "tracing",
  "url",
 ]

@@ -1,10 +1,25 @@
-use std::net::ToSocketAddrs;
+use std::{collections::HashSet, net::ToSocketAddrs};
 
 use actix_web::{
     dev::PeerAddr, error, middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer,
 };
-use awc::Client;
+use awc::{
+    http::header::{HeaderName, CONNECTION, EXPECT, TE, TRANSFER_ENCODING, UPGRADE},
+    Client,
+};
+use once_cell::sync::Lazy;
 use url::Url;
+
+static HOP_HEADERS: Lazy<HashSet<HeaderName>> = Lazy::new(|| {
+    HashSet::from([
+        CONNECTION,
+        TRANSFER_ENCODING,
+        TE,
+        EXPECT,
+        UPGRADE,
+        HeaderName::from_static("keep-alive"),
+    ])
+});
 
 async fn forward(
     req: HttpRequest,
@@ -36,9 +51,11 @@ async fn forward(
         .map_err(error::ErrorInternalServerError)?;
 
     let mut client_resp = HttpResponse::build(res.status());
-    // Remove `Connection` as per
-    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection#Directives
-    for (header_name, header_value) in res.headers().iter().filter(|(h, _)| *h != "connection") {
+    for (header_name, header_value) in res
+        .headers()
+        .iter()
+        .filter(|(h, _)| !HOP_HEADERS.contains(*h))
+    {
         client_resp.insert_header((header_name.clone(), header_value.clone()));
     }
 
