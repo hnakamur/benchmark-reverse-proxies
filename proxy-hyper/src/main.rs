@@ -1,16 +1,18 @@
 use std::net::SocketAddr;
 
-use http::{Request as HttpRequest, Response as HttpResponse, Uri};
+use http::header::SERVER;
+use http::{HeaderValue, Request as HttpRequest, Response as HttpResponse, Uri};
 use hyper::body::Incoming;
-use hyper::header::{HeaderValue, SERVER};
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper_util::client::legacy::{connect::HttpConnector, Client};
 use hyper_util::rt::TokioIo;
+use once_cell::sync::Lazy;
 use tokio::net::TcpListener;
 
-static CLIENT: Lazy<Client> =
-    Lazy::new(|| Client::builder(hyper_util::rt::TokioExecutor::new()).build(HttpConnector::new()));
+static CLIENT: Lazy<Client<HttpConnector, Incoming>> =
+    Lazy::new(|| Client::builder(hyper_util::rt::TokioExecutor::new()).build_http());
+static HYPER: HeaderValue = HeaderValue::from_static("hyper");
 
 async fn hello(
     req: HttpRequest<Incoming>,
@@ -20,7 +22,7 @@ async fn hello(
     let client = CLIENT.clone();
     let mut res = client.request(req).await?;
     let headers = res.headers_mut();
-    headers.insert(SERVER, HeaderValue::from_static("hyper"));
+    headers.insert(SERVER, HYPER);
     Ok(res)
 }
 
