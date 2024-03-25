@@ -21,6 +21,8 @@ static HOP_HEADERS: Lazy<HashSet<HeaderName>> = Lazy::new(|| {
     ])
 });
 
+static X_FORWARDED_FOR: HeaderName = HeaderName::from_static("x-forwarded-for");
+
 async fn forward(
     req: HttpRequest,
     payload: web::Payload,
@@ -40,7 +42,7 @@ async fn forward(
     // X-Forwarded-For header but not the official Forwarded one.
     let forwarded_req = match peer_addr {
         Some(PeerAddr(addr)) => {
-            forwarded_req.insert_header(("x-forwarded-for", addr.ip().to_string()))
+            forwarded_req.insert_header((&X_FORWARDED_FOR, addr.ip().to_string()))
         }
         None => forwarded_req,
     };
