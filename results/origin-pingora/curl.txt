@@ -1,8 +1,7 @@
 HTTP/1.1 200 OK
-Server: pingora
-Content-Type: text/plain
-Content-Length: 14
-Date: Mon, 25 Mar 2024 06:20:58 GMT
-Connection: keep-alive
+content-type: text/plain
+content-length: 14
+date: Mon, 25 Mar 2024 20:30:43 GMT
+server: pingora
 
 Hello, world!

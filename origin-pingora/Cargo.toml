@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.78"
-bytes = "1.6.0"
+chrono = "0.4.35"
 http = "1.1.0"
 pingora = "0.1.0"
+tokio = "1.36.0"
