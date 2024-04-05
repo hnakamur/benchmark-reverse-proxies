@@ -20,24 +20,24 @@ fn main() {
     let origins = [
         // Server::Rust(String::from("origin-actix")),
         // Server::Rust(String::from("origin-hyper")),
-        Server::Rust(String::from("origin-ntex")),
-        // Server::Rust(String::from("origin-pingora")),
+        // Server::Rust(String::from("origin-ntex")),
+        Server::Rust(String::from("origin-pingora")),
         // Server::Nginx(String::from("origin-nginx")),
     ];
     for origin in origins {
         bench_http_origin(&origin).unwrap();
     }
 
-    // let proxies = [
-    //     Server::Rust(String::from("proxy-actix")),
-    //     Server::Rust(String::from("proxy-hyper")),
-    //     Server::Rust(String::from("proxy-pingora")),
-    //     Server::Nginx(String::from("proxy-nginx")),
-    // ];
-    // let origin = Server::Nginx(String::from("origin-nginx"));
-    // for proxy in proxies {
-    //     bench_http_proxy(&proxy, &origin).unwrap();
-    // }
+    let proxies = [
+        // Server::Rust(String::from("proxy-actix")),
+        // Server::Rust(String::from("proxy-hyper")),
+        Server::Rust(String::from("proxy-pingora")),
+        // Server::Nginx(String::from("proxy-nginx")),
+    ];
+    let origin = Server::Nginx(String::from("origin-nginx"));
+    for proxy in proxies {
+        bench_http_proxy(&proxy, &origin).unwrap();
+    }
 }
 
 pub type DynError = Box<dyn Error + Send + Sync + 'static>;

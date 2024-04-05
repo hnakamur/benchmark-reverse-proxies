@@ -9,5 +9,5 @@ edition = "2021"
 async-trait = "0.1.78"
 chrono = "0.4.35"
 http = "1.1.0"
-pingora = "0.1.0"
+pingora = { git = "https://github.com/cloudflare/pingora", branch = "main", package = "pingora" }
 tokio = "1.36.0"

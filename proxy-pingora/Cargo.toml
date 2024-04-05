@@ -7,6 +7,6 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.78"
-pingora = "0.1.0"
-pingora-core = "0.1.0"
-pingora-proxy = "0.1.0"
+pingora = { git = "https://github.com/cloudflare/pingora", branch = "main", package = "pingora" }
+pingora-core = { git = "https://github.com/cloudflare/pingora", branch = "main", package = "pingora-core" }
+pingora-proxy = { git = "https://github.com/cloudflare/pingora", branch = "main", package = "pingora-proxy" }
