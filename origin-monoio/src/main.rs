@@ -1,58 +1,97 @@
-//! HTTP server example with hyper in poll-io mode.
-//!
-//! After running this example, you can open http://localhost:23300
-//! and http://localhost:23300/monoio in your browser or curl it.
-
-use std::net::SocketAddr;
-
 use bytes::Bytes;
-use futures::Future;
-use hyper::{server::conn::http1, service::service_fn};
-use monoio::{io::IntoPollIo, net::TcpListener};
+use chrono::Utc;
+use http::{response::Builder, StatusCode};
+use monoio::{
+    io::{
+        sink::{Sink, SinkExt},
+        stream::Stream,
+        Splitable,
+    },
+    net::{TcpListener, TcpStream},
+};
+use monoio_http::{
+    common::{error::HttpError, request::Request, response::Response},
+    h1::{
+        codec::{decoder::RequestDecoder, encoder::GenericEncoder},
+        payload::{FixedPayload, Payload},
+    },
+    util::spsc::{spsc_pair, SPSCReceiver},
+};
 
-pub(crate) async fn serve_http<S, F, E, A>(addr: A, service: S) -> std::io::Result<()>
-where
-    S: Copy + Fn(Request<hyper::body::Incoming>) -> F + 'static,
-    F: Future<Output = Result<Response<Full<Bytes>>, E>> + 'static,
-    E: std::error::Error + 'static + Send + Sync,
-    A: Into<SocketAddr>,
-{
-    let listener = TcpListener::bind(addr.into())?;
-    loop {
-        let (stream, _) = listener.accept().await?;
-        let stream_poll = monoio_compat::hyper::MonoioIo::new(stream.into_poll_io()?);
-        monoio::spawn(async move {
-            // Handle the connection from the client using HTTP1 and pass any
-            // HTTP requests received on that connection to the `hello` function
-            if let Err(err) = http1::Builder::new()
-                .timer(monoio_compat::hyper::MonoioTimer)
-                .serve_connection(stream_poll, service_fn(service))
-                .await
-            {
-                println!("Error serving connection: {:?}", err);
-            }
-        });
-    }
-}
-
-use http_body_util::Full;
-use hyper::{Method, Request, Response, StatusCode};
-
-async fn hyper_handler(
-    req: Request<hyper::body::Incoming>,
-) -> Result<Response<Full<Bytes>>, std::convert::Infallible> {
-    match (req.method(), req.uri().path()) {
-        (&Method::GET, "/") => Ok(Response::new(Full::new(Bytes::from("Hello, world!\n")))),
-        _ => Ok(Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .body(Full::new(Bytes::from("404 not found")))
-            .unwrap()),
-    }
-}
-
-#[monoio::main(threads = 2, timer_enabled = true)]
+#[monoio::main]
 async fn main() {
-    println!("Running http server on 0.0.0.0:3000");
-    let _ = serve_http(([0, 0, 0, 0], 3000), hyper_handler).await;
-    println!("Http server stopped");
+    let listener = TcpListener::bind("127.0.0.1:3000").unwrap();
+    // println!("Listening");
+    loop {
+        let incoming = listener.accept().await;
+        match incoming {
+            Ok((stream, _addr)) => {
+                // println!("accepted a connection from {}", addr);
+                monoio::spawn(handle_connection(stream));
+            }
+            Err(e) => {
+                println!("accepted connection failed: {}", e);
+            }
+        }
+    }
+}
+
+async fn handle_connection(stream: TcpStream) {
+    let (r, w) = stream.into_split();
+    let sender = GenericEncoder::new(w);
+    let mut receiver = RequestDecoder::new(r);
+    let (mut tx, rx) = spsc_pair();
+    monoio::spawn(handle_task(rx, sender));
+
+    loop {
+        match receiver.next().await {
+            None => {
+                // println!("connection closed, connection handler exit");
+                return;
+            }
+            Some(Err(_)) => {
+                println!("receive request failed, connection handler exit");
+                return;
+            }
+            Some(Ok(item)) => match tx.send(item).await {
+                Err(_) => {
+                    println!("request handler dropped, connection handler exit");
+                    return;
+                }
+                Ok(_) => {
+                    // println!("request handled success");
+                }
+            },
+        }
+    }
+}
+
+async fn handle_task(
+    mut receiver: SPSCReceiver<Request>,
+    mut sender: impl Sink<Response, Error = impl Into<HttpError>>,
+) -> Result<(), HttpError> {
+    loop {
+        let request = match receiver.recv().await {
+            Some(r) => r,
+            None => {
+                return Ok(());
+            }
+        };
+        let resp = handle_request(request).await;
+        sender.send_and_flush(resp).await.map_err(Into::into)?;
+    }
+}
+
+async fn handle_request(_req: Request) -> Response {
+    let now = Utc::now();
+    let date = now.format("%a, %d %b %Y %H:%M:%S GMT").to_string();
+    Builder::new()
+        .status(StatusCode::OK)
+        .header("Server", "monoio")
+        .header("Content-Type", "text/plain")
+        .header("Date", date)
+        .body(Payload::Fixed(FixedPayload::new(Bytes::from(
+            "Hello, world!\n",
+        ))))
+        .unwrap()
 }
