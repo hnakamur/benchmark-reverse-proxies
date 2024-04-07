@@ -1,5 +1,4 @@
 use bytes::Bytes;
-use chrono::Utc;
 use http::{response::Builder, StatusCode};
 use monoio::{
     io::{
@@ -17,6 +16,7 @@ use monoio_http::{
     },
     util::spsc::{spsc_pair, SPSCReceiver},
 };
+use std::time::SystemTime;
 
 #[monoio::main]
 async fn main() {
@@ -83,8 +83,8 @@ async fn handle_task(
 }
 
 async fn handle_request(_req: Request) -> Response {
-    let now = Utc::now();
-    let date = now.format("%a, %d %b %Y %H:%M:%S GMT").to_string();
+    let now = SystemTime::now();
+    let date = format!("{}", httpdate::HttpDate::from(now));
     Builder::new()
         .status(StatusCode::OK)
         .header("Server", "monoio")
