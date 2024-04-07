@@ -20,11 +20,11 @@ fn main() {
     let origins = [
         // Server::Rust(String::from("origin-actix")),
         // Server::Rust(String::from("origin-hyper")),
-        // Server::Rust(String::from("origin-ntex")),
+        Server::Rust(String::from("origin-ntex")),
         // Server::Rust(String::from("origin-monoio")),
         // Server::Rust(String::from("origin-pingora")),
         // Server::Nginx(String::from("origin-nginx")),
-        Server::Rust(String::from("origin-toysync")),
+        // Server::Rust(String::from("origin-toysync")),
     ];
     for origin in origins {
         bench_http_origin(&origin).unwrap();

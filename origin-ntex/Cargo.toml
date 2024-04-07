@@ -8,6 +8,6 @@ edition = "2021"
 [dependencies]
 env_logger = "0.11.3"
 log = "0.4.21"
-ntex = "1.2.0"
-ntex-net = { version = "1.0.0", features = ["tokio"] }
-ntex-rt = { version = "0.4.12", features = ["tokio"] }
+ntex = { git = "https://github.com/ntex-rs/ntex", branch = "master", package = "ntex", features = ["glommio"] }
+ntex-net = { git = "https://github.com/ntex-rs/ntex", branch = "master", package = "ntex-net", features = ["glommio"] }
+ntex-rt = { git = "https://github.com/ntex-rs/ntex", branch = "master", package = "ntex-rt", features = ["glommio"] }
