@@ -22,7 +22,7 @@ async fn hello(
     let client = CLIENT.clone();
     let mut res = client.request(req).await?;
     let headers = res.headers_mut();
-    headers.insert(SERVER, HYPER);
+    headers.insert(SERVER, HYPER.clone());
     Ok(res)
 }
 
