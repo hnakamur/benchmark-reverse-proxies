@@ -21,10 +21,11 @@ fn main() {
         // Server::Rust(String::from("origin-actix")),
         // Server::Rust(String::from("origin-heph")),
         // Server::Rust(String::from("origin-hyper")),
-        Server::Rust(String::from("origin-ntex")),
+        // Server::Rust(String::from("origin-ntex")),
         // Server::Rust(String::from("origin-monoio")),
         // Server::Rust(String::from("origin-pingora")),
         // Server::Nginx(String::from("origin-nginx")),
+        Server::Rust(String::from("origin-tokio")),
         // Server::Rust(String::from("origin-toysync")),
     ];
     for origin in origins {
