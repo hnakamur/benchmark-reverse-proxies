@@ -19,9 +19,9 @@ fn main() {
 
     let origins = [
         // Server::Rust(String::from("origin-actix")),
-        Server::Rust(String::from("origin-heph")),
+        // Server::Rust(String::from("origin-heph")),
         // Server::Rust(String::from("origin-hyper")),
-        // Server::Rust(String::from("origin-ntex")),
+        Server::Rust(String::from("origin-ntex")),
         // Server::Rust(String::from("origin-monoio")),
         // Server::Rust(String::from("origin-pingora")),
         // Server::Nginx(String::from("origin-nginx")),
