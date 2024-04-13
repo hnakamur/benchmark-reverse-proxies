@@ -7,3 +7,6 @@ edition = "2021"
 
 [dependencies]
 httpdate = "1.0.3"
+
+[profile.release]
+debug = 1

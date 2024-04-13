@@ -25,8 +25,8 @@ fn main() {
         // Server::Rust(String::from("origin-monoio")),
         // Server::Rust(String::from("origin-pingora")),
         // Server::Nginx(String::from("origin-nginx")),
-        Server::Rust(String::from("origin-tokio")),
-        // Server::Rust(String::from("origin-toysync")),
+        // Server::Rust(String::from("origin-tokio")),
+        Server::Rust(String::from("origin-toysync")),
     ];
     for origin in origins {
         bench_http_origin(&origin).unwrap();
