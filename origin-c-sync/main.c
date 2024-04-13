@@ -32,7 +32,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    if (listen(server_fd, 5) < 0) {
+    if (listen(server_fd, 256) < 0) {
         perror("Listen failed");
         exit(EXIT_FAILURE);
     }
