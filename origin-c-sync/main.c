@@ -8,7 +8,7 @@
 
 #define PORT 3000
 #define BUFSIZE 1024
-#define THREAD_POOL_SIZE 12
+#define THREAD_POOL_SIZE 24
 #define RESPONSE_BODY "Hello, world!\n"
 
 void *handle_client(void *arg) {
