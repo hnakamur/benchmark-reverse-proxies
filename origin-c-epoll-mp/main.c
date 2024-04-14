@@ -140,6 +140,16 @@ void *handle_client(void *arg) {
                     close(client_fd);
                     continue;
                 }
+
+                tcp_nodelay = 1;
+                if (setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY,
+                            (const void *) &tcp_nodelay, sizeof(int))
+                    == -1)
+                {
+                    perror("setsockopt TCP_NODELAY: client_fd");
+                    close(client_fd);
+                    continue;
+                }
             } else {
                 alignas(16) char buf[BUF_SIZE];
                 n = recvfrom(events[i].data.fd, buf, BUF_SIZE, 0, NULL, NULL);
@@ -162,16 +172,6 @@ void *handle_client(void *arg) {
                     if (closing) {
                         epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
                         close(events[i].data.fd);
-                    } else {
-                        tcp_nodelay = 1;
-                        if (setsockopt(events[i].data.fd, IPPROTO_TCP, TCP_NODELAY,
-                                    (const void *) &tcp_nodelay, sizeof(int))
-                            == -1)
-                        {
-                            perror("setsockopt TCP_NODELAY: client_fd");
-                            close(client_fd);
-                            continue;
-                        }
                     }
                 }
             }
