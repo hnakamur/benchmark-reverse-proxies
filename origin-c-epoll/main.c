@@ -1,3 +1,4 @@
+#define _GNU_SOURCE /* for accept4 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -122,7 +123,7 @@ void *handle_client(void *arg) {
 
         for (i = 0; i < nfds; i++) {
             if (events[i].data.fd == server_fd) {
-                client_fd = accept(server_fd, (struct sockaddr *) &client_addr, &client_addr_len);
+                client_fd = accept4(server_fd, (struct sockaddr *) &client_addr, &client_addr_len, SOCK_NONBLOCK);
                 // printf("accept client_fd=%d\n", client_fd);
                 if (client_fd == -1) {
                     perror("accept");
