@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/epoll.h>
+#include <linux/net.h>
 
 #define MAX_EVENTS 10
 #define BUF_SIZE 1024
@@ -101,13 +102,13 @@ int main() {
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(PORT);
 
-    // reuseport = 1;
-    // if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT,
-    //                 (const void *) &reuseport, sizeof(int)) == -1) {
-    //     perror("setsockopt reuse port failed");
-    //     close(server_fd);
-    //     exit(EXIT_FAILURE);
-    // }
+    reuseport = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT,
+                    (const void *) &reuseport, sizeof(int)) == -1) {
+        perror("setsockopt reuse port failed");
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
 
     if (bind(server_fd, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
         perror("bind failed");
