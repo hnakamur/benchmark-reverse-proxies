@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/uio.h>
 #include <sys/epoll.h>
 #include <linux/net.h>
 #include <linux/tcp.h>
@@ -153,7 +154,10 @@ void *handle_client(void *arg) {
                     int resp_len = snprintf(buf, sizeof(buf),
                         "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s",
                         sizeof(RESPONSE_BODY) - 1, RESPONSE_BODY);
-                    write(events[i].data.fd, buf, resp_len);
+                    struct iovec iov;
+                    iov.iov_base = buf;
+                    iov.iov_len = resp_len;
+                    writev(events[i].data.fd, &iov, 1);
                     if (closing) {
                         epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
                         close(events[i].data.fd);
