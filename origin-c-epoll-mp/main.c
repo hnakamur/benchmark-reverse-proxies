@@ -10,6 +10,7 @@
 #include <sys/epoll.h>
 #include <sys/wait.h>
 #include <linux/net.h>
+#include <linux/tcp.h>
 
 #define MAX_EVENTS 10
 #define BUF_SIZE 1024
@@ -92,7 +93,7 @@ void *handle_client(void *arg) {
     struct sockaddr_in server_addr, client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
     struct epoll_event ev, events[MAX_EVENTS];
-    int nfds, n, i, closing;
+    int nfds, n, i, closing, tcp_nodelay;
 
     server_fd = *(int *)arg;
 
@@ -156,6 +157,16 @@ void *handle_client(void *arg) {
                     if (closing) {
                         epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
                         close(events[i].data.fd);
+                    } else {
+                        tcp_nodelay = 1;
+                        if (setsockopt(events[i].data.fd, IPPROTO_TCP, TCP_NODELAY,
+                                    (const void *) &tcp_nodelay, sizeof(int))
+                            == -1)
+                        {
+                            perror("setsockopt TCP_NODELAY: client_fd");
+                            close(client_fd);
+                            continue;
+                        }
                     }
                 }
             }
