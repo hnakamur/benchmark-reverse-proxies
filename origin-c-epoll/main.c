@@ -133,7 +133,7 @@ void *handle_client(void *arg) {
                     continue;
                 }
 
-                ev.events = EPOLLIN | EPOLLET;
+                ev.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
                 ev.data.fd = client_fd;
                 if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &ev) == -1) {
                     perror("epoll_ctl: client_fd");
