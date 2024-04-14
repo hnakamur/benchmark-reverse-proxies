@@ -14,7 +14,7 @@
 #include <linux/tcp.h>
 #include <stdalign.h>
 
-#define MAX_EVENTS 10
+#define MAX_EVENTS 512
 #define BUF_SIZE 1024
 #define PORT 3000
 #define WORKER_POOL_SIZE 24
