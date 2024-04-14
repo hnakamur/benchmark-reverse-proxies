@@ -4,17 +4,48 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <pthread.h>
 
 #define PORT 3000
 #define BUFSIZE 1024
+#define THREAD_POOL_SIZE 12
 #define RESPONSE_BODY "Hello, world!\n"
 
-int main() {
+void *handle_client(void *arg) {
     int server_fd, client_fd;
-    struct sockaddr_in server_addr, client_addr;
-    socklen_t client_addr_size;
     char buffer[BUFSIZE];
     int read_len;
+    struct sockaddr_in client_addr;
+    socklen_t client_addr_size;
+
+    server_fd = *(int *)arg;
+    client_addr_size = sizeof(client_addr);
+
+    while (1) {
+        client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_addr_size);
+        if (client_fd < 0) {
+            perror("Client accept failed");
+            exit(EXIT_FAILURE);
+        }
+
+        while ((read_len = read(client_fd, buffer, BUFSIZE)) != 0) {
+            int resp_len = snprintf(buffer, sizeof(buffer),
+                "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s",
+                sizeof(RESPONSE_BODY) - 1, RESPONSE_BODY);
+            write(client_fd, buffer, resp_len);
+        }
+
+        close(client_fd);
+    }
+    close(client_fd);
+
+    return NULL;
+}
+
+int main() {
+    int server_fd, rc;
+    struct sockaddr_in server_addr;
+    pthread_t threads[THREAD_POOL_SIZE];
 
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd == -1) {
@@ -37,22 +68,20 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    client_addr_size = sizeof(client_addr);
-    while (1) {
-        client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_addr_size);
-        if (client_fd < 0) {
-            perror("Client accept failed");
-            exit(EXIT_FAILURE);
+    for (int i = 0; i < THREAD_POOL_SIZE; i++) {
+        rc = pthread_create(&threads[i], NULL, handle_client, (void *)&server_fd);
+        if (rc != 0) {
+            perror("Create thread failed");
+            exit(EXIT_FAILURE);            
         }
+    }
 
-        while ((read_len = read(client_fd, buffer, BUFSIZE)) != 0) {
-            int resp_len = snprintf(buffer, sizeof(buffer),
-                "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s",
-                sizeof(RESPONSE_BODY) - 1, RESPONSE_BODY);
-            write(client_fd, buffer, resp_len);
+    for (int i = 0; i < THREAD_POOL_SIZE; i++) {
+        rc = pthread_join(threads[i], NULL);
+        if (rc != 0) {
+            perror("Join thread failed");
+            exit(EXIT_FAILURE);            
         }
-
-        close(client_fd);
     }
 
     close(server_fd);
