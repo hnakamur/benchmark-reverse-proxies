@@ -139,7 +139,7 @@ void *handle_client(void *arg) {
                 }
             } else {
                 char buf[BUF_SIZE];
-                n = read(events[i].data.fd, buf, BUF_SIZE);
+                n = recvfrom(events[i].data.fd, buf, BUF_SIZE, 0, NULL, NULL);
                 // printf("read n=%d, fd=%d\n", n, events[i].data.fd);
                 if (n <= 0) {
                     if (n < 0) perror("read error");
