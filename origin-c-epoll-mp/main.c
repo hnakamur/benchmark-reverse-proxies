@@ -156,7 +156,7 @@ void *handle_client(void *arg) {
                 // printf("read n=%d, fd=%d\n", n, events[i].data.fd);
                 if (n <= 0) {
                     if (n < 0) perror("read error");
-                    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
+                    // epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
                     close(events[i].data.fd);
                 } else {
                     // printf("got request: %.*s\n", n, buf);
