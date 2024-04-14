@@ -12,6 +12,7 @@
 #include <sys/uio.h>
 #include <linux/net.h>
 #include <linux/tcp.h>
+#include <stdalign.h>
 
 #define MAX_EVENTS 10
 #define BUF_SIZE 1024
@@ -140,7 +141,7 @@ void *handle_client(void *arg) {
                     continue;
                 }
             } else {
-                char buf[BUF_SIZE];
+                alignas(16) char buf[BUF_SIZE];
                 n = recvfrom(events[i].data.fd, buf, BUF_SIZE, 0, NULL, NULL);
                 // printf("read n=%d, fd=%d\n", n, events[i].data.fd);
                 if (n <= 0) {
