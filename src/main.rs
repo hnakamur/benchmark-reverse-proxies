@@ -19,14 +19,15 @@ fn main() {
 
     let origins = [
         // Server::Rust(String::from("origin-actix")),
+        Server::Nginx(String::from("origin-nginx")),
         Server::Rust(String::from("origin-c-epoll")),
+        Server::MultiProcess(String::from("origin-c-epoll-mp")),
         // Server::Rust(String::from("origin-c-sync")),
         // Server::Rust(String::from("origin-heph")),
         // Server::Rust(String::from("origin-hyper")),
         // Server::Rust(String::from("origin-ntex")),
         // Server::Rust(String::from("origin-monoio")),
         // Server::Rust(String::from("origin-pingora")),
-        // Server::Nginx(String::from("origin-nginx")),
         // Server::Rust(String::from("origin-tokio")),
         // Server::Rust(String::from("origin-toysync")),
     ];
@@ -104,6 +105,7 @@ fn bench_http_proxy(proxy: &Server, origin: &Server) -> Result<(), DynError> {
 enum Server {
     Rust(String),
     Nginx(String),
+    MultiProcess(String),
 }
 
 impl Server {
@@ -111,6 +113,7 @@ impl Server {
         match self {
             Server::Rust(name) => name.clone(),
             Server::Nginx(config_dir) => config_dir.clone(),
+            Server::MultiProcess(name) => name.clone(),
         }
     }
 
@@ -131,6 +134,12 @@ impl Server {
                     .args(["-c", &path, "-g", "daemon off;"])
                     .spawn()?)
             }
+            Server::MultiProcess(name) => {
+                let mut server_path = PathBuf::from(name);
+                server_path.push("target/release");
+                server_path.push(name);
+                Ok(Command::new(server_path).spawn()?)
+            }
         }
     }
 
@@ -138,6 +147,10 @@ impl Server {
         match self {
             Server::Rust(_) => proc.kill()?,
             Server::Nginx(_) => kill(Pid::from_raw(proc.id() as i32), SIGTERM)?,
+            Server::MultiProcess(name) => {
+                let cmd = format!("pgrep -f {} | xargs -r kill", name);
+                let _ = Command::new("sh").arg("-c").arg(cmd).output()?;
+            }
         }
         Ok(())
     }
