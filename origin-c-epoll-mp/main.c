@@ -151,7 +151,7 @@ void *handle_client(void *arg) {
                     continue;
                 }
             } else {
-                alignas(16) char buf[BUF_SIZE];
+                alignas(1024) char buf[BUF_SIZE];
                 n = recvfrom(events[i].data.fd, buf, BUF_SIZE, 0, NULL, NULL);
                 // printf("read n=%d, fd=%d\n", n, events[i].data.fd);
                 if (n <= 0) {
