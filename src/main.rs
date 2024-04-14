@@ -19,7 +19,8 @@ fn main() {
 
     let origins = [
         // Server::Rust(String::from("origin-actix")),
-        Server::Rust(String::from("origin-c-sync")),
+        Server::Rust(String::from("origin-c-epoll")),
+        // Server::Rust(String::from("origin-c-sync")),
         // Server::Rust(String::from("origin-heph")),
         // Server::Rust(String::from("origin-hyper")),
         // Server::Rust(String::from("origin-ntex")),
