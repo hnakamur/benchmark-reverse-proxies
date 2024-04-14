@@ -17,6 +17,8 @@ use std::{
 fn main() {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
+    cpu_power("performance").unwrap();
+
     let origins = [
         // Server::Rust(String::from("origin-actix")),
         Server::Nginx(String::from("origin-nginx")),
@@ -45,11 +47,21 @@ fn main() {
     // for proxy in proxies {
     //     bench_http_proxy(&proxy, &origin).unwrap();
     // }
+
+    cpu_power("powersave").unwrap();
 }
 
 pub type DynError = Box<dyn Error + Send + Sync + 'static>;
 
+fn cpu_power(mode: &str) -> Result<(), DynError> {
+    let cmd = format!("./cpu_power.sh {}", mode);
+    let _ = Command::new("sh").arg("-c").arg(cmd).output()?;
+    Ok(())
+}
+
 fn bench_http_origin(origin: &Server) -> Result<(), DynError> {
+    thread::sleep(Duration::from_secs(10));
+
     let name = origin.name();
     info!("benchmark origin: {}...", name);
     let mut origin_proc = origin.spawn()?;
@@ -75,6 +87,8 @@ fn bench_http_origin(origin: &Server) -> Result<(), DynError> {
 }
 
 fn bench_http_proxy(proxy: &Server, origin: &Server) -> Result<(), DynError> {
+    thread::sleep(Duration::from_secs(10));
+
     let name = proxy.name();
     info!("benchmark proxy: {}, origin: {}...", name, origin.name());
     let mut origin_proc = origin.spawn()?;
