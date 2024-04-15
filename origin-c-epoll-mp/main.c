@@ -10,6 +10,7 @@
 #include <sys/epoll.h>
 #include <sys/wait.h>
 #include <sys/uio.h>
+#include <sys/ioctl.h>
 #include <linux/net.h>
 #include <linux/tcp.h>
 #include <stdalign.h>
@@ -18,11 +19,18 @@
 #define BUF_SIZE 1024
 #define PORT 3000
 #define WORKER_POOL_SIZE 24
+#define WORKER_MAX_CONN 1024
 #define RESPONSE_BODY "Hello, world!\n"
 
 typedef int ngx_int_t;
 typedef unsigned int ngx_uint_t;
 typedef unsigned char u_char;
+typedef int  ngx_socket_t;
+
+typedef struct {
+    ngx_socket_t        fd;
+    unsigned            tcp_nodelay:2;   /* ngx_connection_tcp_nodelay_e */
+} connection_t;
 
 ngx_int_t
 ngx_strncasecmp(u_char *s1, u_char *s2, size_t n)
@@ -129,7 +137,9 @@ void *handle_client(void *arg) {
                 client_fd = accept4(server_fd, (struct sockaddr *) &client_addr, &client_addr_len, SOCK_NONBLOCK);
                 // printf("accept client_fd=%d\n", client_fd);
                 if (client_fd == -1) {
-                    perror("accept");
+                    if (errno != EAGAIN) {
+                        perror("accept");
+                    }
                     continue;
                 }
 
@@ -182,6 +192,7 @@ void *handle_client(void *arg) {
 int main() {
     int server_fd, epoll_fd, rc, i, reuseaddr, reuseport, status;
     struct sockaddr_in server_addr;
+    unsigned long nb;
     pid_t pid, child_pids[WORKER_POOL_SIZE];
 
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -208,6 +219,13 @@ int main() {
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT,
                     (const void *) &reuseport, sizeof(int)) == -1) {
         perror("setsockopt reuse port failed");
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    nb = 1;
+    if (ioctl(server_fd, FIONBIO, &nb) == -1) {
+        perror("ioctl FIONBIO failed");
         close(server_fd);
         exit(EXIT_FAILURE);
     }

@@ -10,6 +10,7 @@
 #include <netinet/in.h>
 #include <sys/uio.h>
 #include <sys/epoll.h>
+#include <sys/ioctl.h>
 #include <linux/net.h>
 #include <linux/tcp.h>
 #include <stdalign.h>
@@ -129,7 +130,9 @@ void *handle_client(void *arg) {
                 client_fd = accept4(server_fd, (struct sockaddr *) &client_addr, &client_addr_len, SOCK_NONBLOCK);
                 // printf("accept client_fd=%d\n", client_fd);
                 if (client_fd == -1) {
-                    perror("accept");
+                    if (errno != EAGAIN) {
+                        perror("accept");
+                    }
                     continue;
                 }
 
@@ -183,6 +186,7 @@ void *handle_client(void *arg) {
 int main() {
     int server_fd, epoll_fd, rc, i, reuseaddr, reuseport;
     struct sockaddr_in server_addr;
+    unsigned long nb;
     pthread_t threads[THREAD_POOL_SIZE];
 
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -209,6 +213,13 @@ int main() {
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT,
                     (const void *) &reuseport, sizeof(int)) == -1) {
         perror("setsockopt reuse port failed");
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    nb = 1;
+    if (ioctl(server_fd, FIONBIO, &nb) == -1) {
+        perror("ioctl FIONBIO failed");
         close(server_fd);
         exit(EXIT_FAILURE);
     }
