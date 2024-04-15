@@ -140,24 +140,15 @@ void *handle_client(void *arg) {
                     close(client_fd);
                     continue;
                 }
-
-                tcp_nodelay = 1;
-                if (setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY,
-                            (const void *) &tcp_nodelay, sizeof(int))
-                    == -1)
-                {
-                    perror("setsockopt TCP_NODELAY: client_fd");
-                    close(client_fd);
-                    continue;
-                }
             } else {
                 alignas(1024) char buf[BUF_SIZE];
-                n = recvfrom(events[i].data.fd, buf, BUF_SIZE, 0, NULL, NULL);
+                client_fd = events[i].data.fd;
+                n = recvfrom(client_fd, buf, BUF_SIZE, 0, NULL, NULL);
                 // printf("read n=%d, fd=%d\n", n, events[i].data.fd);
                 if (n <= 0) {
                     if (n < 0) perror("read error");
                     // epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
-                    close(events[i].data.fd);
+                    close(client_fd);
                 } else {
                     // printf("got request: %.*s\n", n, buf);
                     closing = has_connection_close(buf, n);
@@ -168,10 +159,20 @@ void *handle_client(void *arg) {
                     struct iovec iov;
                     iov.iov_base = buf;
                     iov.iov_len = resp_len;
-                    writev(events[i].data.fd, &iov, 1);
+                    writev(client_fd, &iov, 1);
                     if (closing) {
-                        epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
-                        close(events[i].data.fd);
+                        // epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
+                        close(client_fd);
+                    } else {
+                        tcp_nodelay = 1;
+                        if (setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY,
+                                    (const void *) &tcp_nodelay, sizeof(int))
+                            == -1)
+                        {
+                            perror("setsockopt TCP_NODELAY: client_fd");
+                            close(client_fd);
+                            continue;
+                        }
                     }
                 }
             }
@@ -218,7 +219,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    if (listen(server_fd, SOMAXCONN) < 0) {
+    if (listen(server_fd, 511) < 0) {
         perror("listen failed");
         close(server_fd);
         exit(EXIT_FAILURE);
