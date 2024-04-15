@@ -190,7 +190,7 @@ void *handle_client(void *arg) {
 }
 
 int main() {
-    int server_fd, epoll_fd, rc, i, reuseaddr, reuseport, status;
+    int server_fd, epoll_fd, rc, i, reuseaddr, status;
     struct sockaddr_in server_addr;
     unsigned long nb;
     pid_t pid, child_pids[WORKER_POOL_SIZE];
@@ -211,14 +211,6 @@ int main() {
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR,
                     (const void *) &reuseaddr, sizeof(int)) == -1) {
         perror("setsockopt reuse addr failed");
-        close(server_fd);
-        exit(EXIT_FAILURE);
-    }
-
-    reuseport = 1;
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT,
-                    (const void *) &reuseport, sizeof(int)) == -1) {
-        perror("setsockopt reuse port failed");
         close(server_fd);
         exit(EXIT_FAILURE);
     }
