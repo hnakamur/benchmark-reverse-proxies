@@ -108,7 +108,7 @@ void *handle_client(void *arg) {
         exit(EXIT_FAILURE);
     }
 
-    ev.events = EPOLLIN | EPOLLET;
+    ev.events = EPOLLIN | EPOLLEXCLUSIVE;
     ev.data.fd = server_fd;
     if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_fd, &ev) == -1) {
         perror("epoll_ctl: server_fd");
