@@ -19,11 +19,25 @@
 #define BUF_SIZE 1024
 #define PORT 3000
 #define THREAD_POOL_SIZE 24
+#define WORKER_CONNECTIONS 1024
 #define RESPONSE_BODY "Hello, world!\n"
 
 typedef int ngx_int_t;
 typedef unsigned int ngx_uint_t;
 typedef unsigned char u_char;
+typedef int ngx_socket_t;
+
+typedef struct {
+    void               *data;
+    ngx_socket_t        fd;
+    unsigned            tcp_nodelay:2;   /* ngx_connection_tcp_nodelay_e */
+} ngx_connection_t;
+
+typedef enum {
+    NGX_TCP_NODELAY_UNSET = 0,
+    NGX_TCP_NODELAY_SET,
+    NGX_TCP_NODELAY_DISABLED
+} ngx_connection_tcp_nodelay_e;
 
 ngx_int_t
 ngx_strncasecmp(u_char *s1, u_char *s2, size_t n)
@@ -91,6 +105,50 @@ static int has_connection_close(char *req, int n) {
     return ngx_strlcasestrn(req, req + n, CONNECTION_CLOSE, sizeof(CONNECTION_CLOSE) - 2) != NULL;
 }
 
+static void init_connections(ngx_connection_t *connections, ngx_uint_t connection_n) {
+    ngx_uint_t           i;
+    ngx_connection_t    *c, *next;
+
+    i = connection_n;
+    c = connections;
+    next = NULL;
+
+    do {
+        i--;
+
+        c[i].data = next;
+        c[i].fd = (ngx_socket_t) -1;
+        c[i].tcp_nodelay = NGX_TCP_NODELAY_UNSET;
+
+        next = &c[i];
+    } while (i);
+}
+
+static ngx_connection_t *get_connection(ngx_connection_t **free_connections, ngx_uint_t *free_connection_n) {
+    ngx_connection_t  *c;
+
+    c = *free_connections;
+    if (c == NULL) {
+        fprintf(stderr, "worker_connections are not enought\n");
+        return NULL;
+    }
+    *free_connections = c->data;
+    *free_connection_n--;    
+    c->tcp_nodelay = NGX_TCP_NODELAY_UNSET;
+    return c;
+}
+
+static void free_connection(ngx_connection_t *c, ngx_connection_t **free_connections, ngx_uint_t *free_connection_n) {
+    c->data = *free_connections;
+    *free_connections = c;
+    *free_connection_n++;
+}
+
+static void close_connection(ngx_connection_t *c, ngx_connection_t **free_connections, ngx_uint_t *free_connection_n) {
+    free_connection(c, free_connections, free_connection_n);
+    close(c->fd);
+}
+
 void *handle_client(void *arg) {
     ngx_uint_t server_fd_requests = 0;
     int server_fd, client_fd, epoll_fd;
@@ -98,8 +156,15 @@ void *handle_client(void *arg) {
     socklen_t client_addr_len = sizeof(client_addr);
     struct epoll_event ev, events[MAX_EVENTS];
     int nfds, n, i, closing, tcp_nodelay;
+    ngx_connection_t *c, *free_connections, connections[WORKER_CONNECTIONS];
+    ngx_uint_t free_connection_n, connection_n;
 
     server_fd = *(int *)arg;
+
+    connection_n = WORKER_CONNECTIONS;
+    init_connections(connections, connection_n);
+    free_connections = &connections[0];
+    free_connection_n = connection_n;
 
     epoll_fd = epoll_create1(0);
     // printf("epoll_fd=%d\n", epoll_fd);
@@ -160,46 +225,51 @@ void *handle_client(void *arg) {
                     }
                 }
 
+                c = get_connection(&free_connections, &free_connection_n);
+                c->fd = client_fd;
                 ev.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
-                ev.data.fd = client_fd;
+                ev.data.ptr = c;
                 if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &ev) == -1) {
                     perror("epoll_ctl: client_fd");
-                    close(client_fd);
+                    close_connection(c, &free_connections, &free_connection_n);
                     continue;
                 }
             } else {
                 alignas(1024) char buf[BUF_SIZE];
-                client_fd = events[i].data.fd;
+                c = events[i].data.ptr;
+                client_fd = c->fd;
                 n = recvfrom(client_fd, buf, BUF_SIZE, 0, NULL, NULL);
-                // printf("read n=%d, fd=%d\n", n, events[i].data.fd);
                 if (n <= 0) {
                     if (n < 0) perror("read error");
-                    // epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
-                    close(client_fd);
+                    close_connection(c, &free_connections, &free_connection_n);
                 } else {
-                    // printf("got request: %.*s\n", n, buf);
                     closing = has_connection_close(buf, n);
-                    // printf("has connection close: %d\n", closing);
                     int resp_len = snprintf(buf, sizeof(buf),
                         "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s",
                         sizeof(RESPONSE_BODY) - 1, RESPONSE_BODY);
                     struct iovec iov;
                     iov.iov_base = buf;
                     iov.iov_len = resp_len;
-                    writev(client_fd, &iov, 1);
+                    if (writev(client_fd, &iov, 1) == -1) {
+                        perror("writev");
+                        close_connection(c, &free_connections, &free_connection_n);
+                        continue;
+                    }
                     if (closing) {
-                        // epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
-                        close(client_fd);
+                        close_connection(c, &free_connections, &free_connection_n);
                     } else {
-                        tcp_nodelay = 1;
-                        if (setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY,
-                                    (const void *) &tcp_nodelay, sizeof(int))
-                            == -1)
-                        {
-                            perror("setsockopt TCP_NODELAY: client_fd");
-                            close(client_fd);
-                            continue;
+                        if (c->tcp_nodelay == NGX_TCP_NODELAY_UNSET) {
+                            tcp_nodelay = 1;
+                            if (setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY,
+                                        (const void *) &tcp_nodelay, sizeof(int))
+                                == -1)
+                            {
+                                perror("setsockopt TCP_NODELAY: client_fd");
+                                close_connection(c, &free_connections, &free_connection_n);
+                                continue;
+                            }
                         }
+                        c->tcp_nodelay = NGX_TCP_NODELAY_SET;
                     }
                 }
             }
