@@ -92,6 +92,7 @@ static int has_connection_close(char *req, int n) {
 }
 
 void *handle_client(void *arg) {
+    ngx_uint_t server_fd_requests = 0;
     int server_fd, client_fd, epoll_fd;
     struct sockaddr_in server_addr, client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
@@ -111,7 +112,7 @@ void *handle_client(void *arg) {
     ev.events = EPOLLIN | EPOLLEXCLUSIVE;
     ev.data.fd = server_fd;
     if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_fd, &ev) == -1) {
-        perror("epoll_ctl: server_fd");
+        perror("epoll_ctl: add server_fd");
         close(server_fd);
         exit(EXIT_FAILURE);
     }
@@ -134,6 +135,29 @@ void *handle_client(void *arg) {
                         perror("accept");
                     }
                     continue;
+                }
+
+                /*
+                 * Re-add the socket periodically so that other worker threads
+                 * will get a chance to accept connections.
+                 * See ngx_reorder_accept_events.
+                 */
+                if (server_fd_requests++ % 16 == 0) {
+                    ev.events = 0;
+                    ev.data.ptr = NULL;
+                    if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, server_fd, &ev) == -1) {
+                        perror("epoll_ctl: del server_fd");
+                        close(server_fd);
+                        exit(EXIT_FAILURE);
+                    }
+
+                    ev.events = EPOLLIN | EPOLLEXCLUSIVE;
+                    ev.data.fd = server_fd;
+                    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_fd, &ev) == -1) {
+                        perror("epoll_ctl: add server_fd");
+                        close(server_fd);
+                        exit(EXIT_FAILURE);
+                    }
                 }
 
                 ev.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
