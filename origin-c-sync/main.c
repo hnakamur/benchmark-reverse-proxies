@@ -7,11 +7,15 @@
 #include <sys/socket.h>
 #include <pthread.h>
 #include <linux/tcp.h>
+#include <sys/time.h>
+#include <time.h>
 
 #define PORT 3000
 #define BUFSIZE 1024
 #define THREAD_POOL_SIZE 24
 #define RESPONSE_BODY "Hello, world!\n"
+#define SERVER "origin-c-sync"
+#define HTTP_DATE_BUF_LEN sizeof("Sun, 06 Nov 1994 08:49:37 GMT")
 
 typedef int ngx_int_t;
 typedef unsigned int ngx_uint_t;
@@ -83,6 +87,24 @@ static int has_connection_close(char *req, int n) {
     return ngx_strlcasestrn(req, req + n, CONNECTION_CLOSE, sizeof(CONNECTION_CLOSE) - 2) != NULL;
 }
 
+static time_t get_now() {
+    struct timeval tv;
+
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec;
+}
+
+static int format_http_date(time_t now, char buffer[HTTP_DATE_BUF_LEN]) {
+    struct tm *tm;
+
+    tm = gmtime(&now);
+    if (tm == NULL) {
+        perror("gmtime failed");
+        return -1;
+    }
+    return (int)strftime(buffer, HTTP_DATE_BUF_LEN, "%a, %d %b %Y %H:%M:%S GMT", tm);
+}
+
 static int set_tcp_nodelay(int sockfd) {
     int tcp_nodelay = 1;
     return setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
@@ -95,6 +117,9 @@ void *handle_client(void *arg) {
     int read_len, closing, first_write;
     struct sockaddr_in client_addr;
     socklen_t client_addr_size;
+    char http_date_buf[HTTP_DATE_BUF_LEN];
+    int http_date_len;
+    time_t now, prev_now = 0;
 
     server_fd = *(int *)arg;
     client_addr_size = sizeof(client_addr);
@@ -117,10 +142,30 @@ void *handle_client(void *arg) {
                 break;
             } else {
                 closing = has_connection_close(buffer, read_len);
+                now = get_now();
+                if (now != prev_now) {
+                    http_date_len = format_http_date(now, http_date_buf);
+                    if (http_date_len == -1) {
+                        continue;
+                    }
+                    prev_now = now;
+                }
                 int resp_len = snprintf(buffer, sizeof(buffer),
-                    "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s",
+                    "HTTP/1.1 200 OK\r\n"
+                    "Date: %s\r\n"
+                    "Server: %s\r\n"
+                    "Content-Type: text/plain\r\n"
+                    "Content-Length: %d\r\n"
+                    "\r\n"
+                    "%s",
+                    http_date_buf,
+                    SERVER,
                     sizeof(RESPONSE_BODY) - 1, RESPONSE_BODY);
-                write(client_fd, buffer, resp_len);
+                if (write(client_fd, buffer, resp_len) == -1) {
+                    perror("write");
+                    close(client_fd);
+                    break;
+                }
                 if (closing) {
                     close(client_fd);
                     break;
