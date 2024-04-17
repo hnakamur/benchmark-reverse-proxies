@@ -153,13 +153,16 @@ static void close_connection(ngx_connection_t *c, ngx_connection_t **free_connec
     close(c->fd);
 }
 
-static int format_http_date(char buffer[HTTP_DATE_BUF_LEN]) {
+static time_t get_now() {
     struct timeval tv;
-    time_t now;
-    struct tm *tm;
 
     gettimeofday(&tv, NULL);
-    now = tv.tv_sec;
+    return tv.tv_sec;
+}
+
+static int format_http_date(time_t now, char buffer[HTTP_DATE_BUF_LEN]) {
+    struct tm *tm;
+
     tm = gmtime(&now);
     if (tm == NULL) {
         perror("gmtime failed");
@@ -179,6 +182,7 @@ void *handle_client(void *arg) {
     ngx_uint_t free_connection_n, connection_n;
     char http_date_buf[HTTP_DATE_BUF_LEN];
     int http_date_len;
+    time_t now, prev_now = 0;
 
     server_fd = *(int *)arg;
 
@@ -265,9 +269,13 @@ void *handle_client(void *arg) {
                     close_connection(c, &free_connections, &free_connection_n);
                 } else {
                     closing = has_connection_close(buf, n);
-                    http_date_len = format_http_date(http_date_buf);
-                    if (http_date_len == -1) {
-                        continue;
+                    now = get_now();
+                    if (now != prev_now) {
+                        http_date_len = format_http_date(now, http_date_buf);
+                        if (http_date_len == -1) {
+                            continue;
+                        }
+                        prev_now = now;
                     }
                     int resp_len = snprintf(buf, sizeof(buf),
                         "HTTP/1.1 200 OK\r\n"
