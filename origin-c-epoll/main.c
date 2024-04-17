@@ -14,6 +14,8 @@
 #include <linux/net.h>
 #include <linux/tcp.h>
 #include <stdalign.h>
+#include <sys/time.h>
+#include <time.h>
 
 #define MAX_EVENTS 512
 #define BUF_SIZE 1024
@@ -21,6 +23,8 @@
 #define THREAD_POOL_SIZE 24
 #define WORKER_CONNECTIONS 1024
 #define RESPONSE_BODY "Hello, world!\n"
+#define SERVER "origin-c-epoll"
+#define HTTP_DATE_BUF_LEN sizeof("Sun, 06 Nov 1994 08:49:37 GMT")
 
 typedef int ngx_int_t;
 typedef unsigned int ngx_uint_t;
@@ -149,6 +153,21 @@ static void close_connection(ngx_connection_t *c, ngx_connection_t **free_connec
     close(c->fd);
 }
 
+static int format_http_date(char buffer[HTTP_DATE_BUF_LEN]) {
+    struct timeval tv;
+    time_t now;
+    struct tm *tm;
+
+    gettimeofday(&tv, NULL);
+    now = tv.tv_sec;
+    tm = gmtime(&now);
+    if (tm == NULL) {
+        perror("gmtime failed");
+        return -1;
+    }
+    return (int)strftime(buffer, HTTP_DATE_BUF_LEN, "%a, %d %b %Y %H:%M:%S GMT", tm);
+}
+
 void *handle_client(void *arg) {
     ngx_uint_t server_fd_requests = 0;
     int server_fd, client_fd, epoll_fd;
@@ -158,6 +177,8 @@ void *handle_client(void *arg) {
     int nfds, n, i, closing, tcp_nodelay;
     ngx_connection_t *c, *free_connections, connections[WORKER_CONNECTIONS];
     ngx_uint_t free_connection_n, connection_n;
+    char http_date_buf[HTTP_DATE_BUF_LEN];
+    int http_date_len;
 
     server_fd = *(int *)arg;
 
@@ -244,8 +265,20 @@ void *handle_client(void *arg) {
                     close_connection(c, &free_connections, &free_connection_n);
                 } else {
                     closing = has_connection_close(buf, n);
+                    http_date_len = format_http_date(http_date_buf);
+                    if (http_date_len == -1) {
+                        continue;
+                    }
                     int resp_len = snprintf(buf, sizeof(buf),
-                        "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s",
+                        "HTTP/1.1 200 OK\r\n"
+                        "Date: %s\r\n"
+                        "Server: %s\r\n"
+                        "Content-Type: text/plain\r\n"
+                        "Content-Length: %d\r\n"
+                        "\r\n"
+                        "%s",
+                        http_date_buf,
+                        SERVER,
                         sizeof(RESPONSE_BODY) - 1, RESPONSE_BODY);
                     struct iovec iov;
                     iov.iov_base = buf;
