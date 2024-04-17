@@ -1,4 +1,3 @@
-#define _GNU_SOURCE /* for accept4 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -101,11 +100,8 @@ void *handle_client(void *arg) {
     client_addr_size = sizeof(client_addr);
 
     while (1) {
-        client_fd = accept4(server_fd, (struct sockaddr *)&client_addr, &client_addr_size, SOCK_NONBLOCK);
+        client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_addr_size);
         if (client_fd < 0) {
-            if (errno == EAGAIN) {
-                continue;
-            }
             perror("Client accept failed");
             exit(EXIT_FAILURE);
         }
@@ -115,9 +111,6 @@ void *handle_client(void *arg) {
             read_len = read(client_fd, buffer, BUFSIZE);
             if (read_len <= 0) {
                 if (read_len < 0) {
-                    if (errno == EAGAIN) {
-                        continue;
-                    }
                     perror("read error");
                 }
                 close(client_fd);
