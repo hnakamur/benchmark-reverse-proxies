@@ -13,6 +13,7 @@
 #define PORT 3000
 #define BUFSIZE 1024
 #define THREAD_POOL_SIZE 24
+#define BACKLOG 512
 #define RESPONSE_BODY "Hello, world!\n"
 #define SERVER "origin-c-sync"
 #define HTTP_DATE_BUF_LEN sizeof("Sun, 06 Nov 1994 08:49:37 GMT")
@@ -206,7 +207,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    if (listen(server_fd, 256) < 0) {
+    if (listen(server_fd, BACKLOG) < 0) {
         perror("Listen failed");
         exit(EXIT_FAILURE);
     }
