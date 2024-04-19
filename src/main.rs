@@ -24,7 +24,7 @@ fn main() {
         // Server::Nginx(String::from("origin-nginx")),
         // Server::Rust(String::from("origin-c-epoll")),
         // Server::MultiProcess(String::from("origin-c-epoll-mp")),
-        Server::Rust(String::from("origin-c-sync")),
+        // Server::Rust(String::from("origin-c-sync")),
         // Server::Rust(String::from("origin-heph")),
         // Server::Rust(String::from("origin-hyper")),
         // Server::Rust(String::from("origin-liburing")),
@@ -33,6 +33,7 @@ fn main() {
         // Server::Rust(String::from("origin-pingora")),
         // Server::Rust(String::from("origin-tokio")),
         // Server::Rust(String::from("origin-toysync")),
+        Server::Zig(String::from("origin-zap")),
     ];
     for origin in origins {
         bench_http_origin(&origin).unwrap();
@@ -121,6 +122,7 @@ enum Server {
     Rust(String),
     Nginx(String),
     MultiProcess(String),
+    Zig(String),
 }
 
 impl Server {
@@ -129,6 +131,7 @@ impl Server {
             Server::Rust(name) => name.clone(),
             Server::Nginx(config_dir) => config_dir.clone(),
             Server::MultiProcess(name) => name.clone(),
+            Server::Zig(name) => name.clone(),
         }
     }
 
@@ -155,6 +158,13 @@ impl Server {
                 server_path.push(name);
                 Ok(Command::new(server_path).spawn()?)
             }
+            Server::Zig(name) => {
+                let mut server_path = PathBuf::from(name);
+                server_path.push("zig-out/bin");
+                server_path.push(name);
+                let cmd = format!("{} >/dev/null 2>&1", server_path.to_string_lossy());
+                Ok(Command::new("sh").arg("-c").arg(cmd).spawn()?)
+            }
         }
     }
 
@@ -166,6 +176,7 @@ impl Server {
                 let cmd = format!("pgrep -f {} | xargs -r kill", name);
                 let _ = Command::new("sh").arg("-c").arg(cmd).output()?;
             }
+            Server::Zig(_) => proc.kill()?,
         }
         Ok(())
     }
