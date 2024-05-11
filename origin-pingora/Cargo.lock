@@ -115,7 +115,7 @@ checksum = "16e62a023e7c117e27523144c5d2459f4397fcc3cab0085af8e2224f643a0193"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.61",
+ "syn 2.0.62",
 ]
 
 [[package]]
@@ -126,7 +126,7 @@ checksum = "c6fa2087f2753a7da8cc1c0dbfcf89579dd57458e36769de5ac750b4671737ca"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.61",
+ "syn 2.0.62",
 ]
 
 [[package]]
@@ -507,7 +507,7 @@ checksum = "87750cf4b7a4c0625b1529e4c543c2182106e4dedc60a2a6455e00d212c489ac"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.61",
+ "syn 2.0.62",
 ]
 
 [[package]]
@@ -1003,7 +1003,7 @@ checksum = "a948666b637a0f465e8564c73e89d4dde00d72d4d473cc972f390fc3dcee7d9c"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.61",
+ "syn 2.0.62",
 ]
 
 [[package]]
@@ -1094,8 +1094,8 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "pingora"
-version = "0.1.0"
-source = "git+https://github.com/cloudflare/pingora?branch=main#2501d4adb038d93613c0edbd7c1e3b3de9b415b1"
+version = "0.2.0"
+source = "git+https://github.com/cloudflare/pingora?branch=main#3dbdcc6b0911fdad6361611955efa17810edf74a"
 dependencies = [
  "pingora-cache",
  "pingora-core",
@@ -1107,8 +1107,8 @@ dependencies = [
 
 [[package]]
 name = "pingora-cache"
-version = "0.1.0"
-source = "git+https://github.com/cloudflare/pingora?branch=main#2501d4adb038d93613c0edbd7c1e3b3de9b415b1"
+version = "0.2.0"
+source = "git+https://github.com/cloudflare/pingora?branch=main#3dbdcc6b0911fdad6361611955efa17810edf74a"
 dependencies = [
  "ahash",
  "async-trait",
@@ -1140,8 +1140,8 @@ dependencies = [
 
 [[package]]
 name = "pingora-core"
-version = "0.1.0"
-source = "git+https://github.com/cloudflare/pingora?branch=main#2501d4adb038d93613c0edbd7c1e3b3de9b415b1"
+version = "0.2.0"
+source = "git+https://github.com/cloudflare/pingora?branch=main#3dbdcc6b0911fdad6361611955efa17810edf74a"
 dependencies = [
  "ahash",
  "async-trait",
@@ -1187,13 +1187,13 @@ dependencies = [
 
 [[package]]
 name = "pingora-error"
-version = "0.1.0"
-source = "git+https://github.com/cloudflare/pingora?branch=main#2501d4adb038d93613c0edbd7c1e3b3de9b415b1"
+version = "0.2.0"
+source = "git+https://github.com/cloudflare/pingora?branch=main#3dbdcc6b0911fdad6361611955efa17810edf74a"
 
 [[package]]
 name = "pingora-header-serde"
-version = "0.1.0"
-source = "git+https://github.com/cloudflare/pingora?branch=main#2501d4adb038d93613c0edbd7c1e3b3de9b415b1"
+version = "0.2.0"
+source = "git+https://github.com/cloudflare/pingora?branch=main#3dbdcc6b0911fdad6361611955efa17810edf74a"
 dependencies = [
  "bytes",
  "http 1.1.0",
@@ -1207,8 +1207,8 @@ dependencies = [
 
 [[package]]
 name = "pingora-http"
-version = "0.1.0"
-source = "git+https://github.com/cloudflare/pingora?branch=main#2501d4adb038d93613c0edbd7c1e3b3de9b415b1"
+version = "0.2.0"
+source = "git+https://github.com/cloudflare/pingora?branch=main#3dbdcc6b0911fdad6361611955efa17810edf74a"
 dependencies = [
  "bytes",
  "http 1.1.0",
@@ -1217,16 +1217,16 @@ dependencies = [
 
 [[package]]
 name = "pingora-ketama"
-version = "0.1.0"
-source = "git+https://github.com/cloudflare/pingora?branch=main#2501d4adb038d93613c0edbd7c1e3b3de9b415b1"
+version = "0.2.0"
+source = "git+https://github.com/cloudflare/pingora?branch=main#3dbdcc6b0911fdad6361611955efa17810edf74a"
 dependencies = [
  "crc32fast",
 ]
 
 [[package]]
 name = "pingora-load-balancing"
-version = "0.1.0"
-source = "git+https://github.com/cloudflare/pingora?branch=main#2501d4adb038d93613c0edbd7c1e3b3de9b415b1"
+version = "0.2.0"
+source = "git+https://github.com/cloudflare/pingora?branch=main#3dbdcc6b0911fdad6361611955efa17810edf74a"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -1244,8 +1244,8 @@ dependencies = [
 
 [[package]]
 name = "pingora-lru"
-version = "0.1.0"
-source = "git+https://github.com/cloudflare/pingora?branch=main#2501d4adb038d93613c0edbd7c1e3b3de9b415b1"
+version = "0.2.0"
+source = "git+https://github.com/cloudflare/pingora?branch=main#3dbdcc6b0911fdad6361611955efa17810edf74a"
 dependencies = [
  "arrayvec",
  "hashbrown 0.14.5",
@@ -1255,8 +1255,8 @@ dependencies = [
 
 [[package]]
 name = "pingora-openssl"
-version = "0.1.0"
-source = "git+https://github.com/cloudflare/pingora?branch=main#2501d4adb038d93613c0edbd7c1e3b3de9b415b1"
+version = "0.2.0"
+source = "git+https://github.com/cloudflare/pingora?branch=main#3dbdcc6b0911fdad6361611955efa17810edf74a"
 dependencies = [
  "foreign-types",
  "libc",
@@ -1268,8 +1268,8 @@ dependencies = [
 
 [[package]]
 name = "pingora-pool"
-version = "0.1.0"
-source = "git+https://github.com/cloudflare/pingora?branch=main#2501d4adb038d93613c0edbd7c1e3b3de9b415b1"
+version = "0.2.0"
+source = "git+https://github.com/cloudflare/pingora?branch=main#3dbdcc6b0911fdad6361611955efa17810edf74a"
 dependencies = [
  "crossbeam-queue",
  "log",
@@ -1282,8 +1282,8 @@ dependencies = [
 
 [[package]]
 name = "pingora-proxy"
-version = "0.1.0"
-source = "git+https://github.com/cloudflare/pingora?branch=main#2501d4adb038d93613c0edbd7c1e3b3de9b415b1"
+version = "0.2.0"
+source = "git+https://github.com/cloudflare/pingora?branch=main#3dbdcc6b0911fdad6361611955efa17810edf74a"
 dependencies = [
  "async-trait",
  "bytes",
@@ -1304,8 +1304,8 @@ dependencies = [
 
 [[package]]
 name = "pingora-runtime"
-version = "0.1.0"
-source = "git+https://github.com/cloudflare/pingora?branch=main#2501d4adb038d93613c0edbd7c1e3b3de9b415b1"
+version = "0.2.0"
+source = "git+https://github.com/cloudflare/pingora?branch=main#3dbdcc6b0911fdad6361611955efa17810edf74a"
 dependencies = [
  "once_cell",
  "rand",
@@ -1315,8 +1315,8 @@ dependencies = [
 
 [[package]]
 name = "pingora-timeout"
-version = "0.1.0"
-source = "git+https://github.com/cloudflare/pingora?branch=main#2501d4adb038d93613c0edbd7c1e3b3de9b415b1"
+version = "0.2.0"
+source = "git+https://github.com/cloudflare/pingora?branch=main#3dbdcc6b0911fdad6361611955efa17810edf74a"
 dependencies = [
  "futures",
  "once_cell",
@@ -1746,29 +1746,29 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.200"
+version = "1.0.201"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ddc6f9cc94d67c0e21aaf7eda3a010fd3af78ebf6e096aa6e2e13c79749cce4f"
+checksum = "780f1cebed1629e4753a1a38a3c72d30b97ec044f0aef68cb26650a3c5cf363c"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.200"
+version = "1.0.201"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "856f046b9400cee3c8c94ed572ecdb752444c24528c035cd35882aad6f492bcb"
+checksum = "c5e405930b9796f1c00bee880d03fc7e0bb4b9a11afc776885ffe84320da2865"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.61",
+ "syn 2.0.62",
 ]
 
 [[package]]
 name = "serde_json"
-version = "1.0.116"
+version = "1.0.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e17db7126d17feb94eb3fad46bf1a96b034e8aacbc2e775fe81505f8b0b2813"
+checksum = "455182ea6142b14f93f4bc5320a2b31c1f266b66a4a5c858b013302a5d8cbfc3"
 dependencies = [
  "itoa",
  "ryu",
@@ -1899,9 +1899,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.61"
+version = "2.0.62"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c993ed8ccba56ae856363b1845da7266a7cb78e1d146c8a32d54b45a8b831fc9"
+checksum = "9f660c3bfcefb88c538776b6685a0c472e3128b51e74d48793dc2a488196e8eb"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1961,7 +1961,7 @@ checksum = "e2470041c06ec3ac1ab38d0356a6119054dedaea53e12fbefc0de730a1c08524"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.61",
+ "syn 2.0.62",
 ]
 
 [[package]]
@@ -2056,7 +2056,7 @@ checksum = "5b8a1e28f2deaa14e508979454cb3a223b10b938b45af148bc0986de36f1923b"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.61",
+ "syn 2.0.62",
 ]
 
 [[package]]
@@ -2317,7 +2317,7 @@ dependencies = [
  "once_cell",
  "proc-macro2",
  "quote",
- "syn 2.0.61",
+ "syn 2.0.62",
  "wasm-bindgen-shared",
 ]
 
@@ -2351,7 +2351,7 @@ checksum = "e94f17b526d0a461a191c78ea52bbce64071ed5c04c9ffe424dcb38f74171bb7"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.61",
+ "syn 2.0.62",
  "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]
@@ -2584,7 +2584,7 @@ checksum = "15e934569e47891f7d9411f1a451d947a60e000ab3bd24fbb970f000387d1b3b"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.61",
+ "syn 2.0.62",
 ]
 
 [[package]]
