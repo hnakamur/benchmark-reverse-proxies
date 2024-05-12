@@ -122,7 +122,7 @@ static void prep_accept(struct io_uring *ring, int fd,
   c->type = ACCEPT;
   c->closing = 0;
   c->nodelay_set = 0;
-  sqe->user_data = (uint64_t)c;
+  io_uring_sqe_set_data(sqe, c);
 }
 
 static void prep_recv(struct io_uring *ring, int fd, connection *c) {
@@ -131,7 +131,7 @@ static void prep_recv(struct io_uring *ring, int fd, connection *c) {
 
   c->fd = fd;
   c->type = READ;
-  sqe->user_data = (uint64_t)c;
+  io_uring_sqe_set_data(sqe, c);
 }
 
 static void prep_send(struct io_uring *ring, int fd, connection *c,
@@ -145,7 +145,7 @@ static void prep_send(struct io_uring *ring, int fd, connection *c,
 
   c->fd = fd;
   c->type = WRITE;
-  sqe->user_data = (uint64_t)c;
+  io_uring_sqe_set_data(sqe, c);
 }
 
 static void prep_close(struct io_uring *ring, connection *c) {
@@ -157,7 +157,7 @@ static void prep_close(struct io_uring *ring, connection *c) {
   io_uring_prep_close(sqe, c->fd);
 
   c->type = CLOSE;
-  sqe->user_data = (uint64_t)c;
+  io_uring_sqe_set_data(sqe, c);
 }
 
 ngx_int_t ngx_strncasecmp(u_char *s1, u_char *s2, size_t n) {
@@ -279,7 +279,7 @@ static int serve(int server_sock) {
     unsigned count = 0;
     io_uring_for_each_cqe(&ring, head, cqe) {
       ++count;
-      connection *c = (connection *)cqe->user_data;
+      connection *c = (connection *)io_uring_cqe_get_data(cqe);
       switch (c->type) {
       case ACCEPT: {
         int client_sock = cqe->res;
