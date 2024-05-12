@@ -134,19 +134,18 @@ static void prep_recv(struct io_uring *ring, int fd, connection *c) {
   sqe->user_data = (uint64_t)c;
 }
 
-static struct io_uring_sqe *prep_send(struct io_uring *ring, int fd,
-                                      connection *c, size_t len, int flags) {
+static void prep_send(struct io_uring *ring, int fd, connection *c,
+                      size_t len) {
   struct io_uring_sqe *sqe = io_uring_get_sqe(ring);
   if (sqe == NULL) {
     fprintf(stderr, "cannot get sqe in prep_send\n");
     exit(1);
   }
-  io_uring_prep_send(sqe, fd, c->buf, len, flags);
+  io_uring_prep_send(sqe, fd, c->buf, len, 0);
 
   c->fd = fd;
   c->type = WRITE;
   sqe->user_data = (uint64_t)c;
-  return sqe;
 }
 
 static void prep_close(struct io_uring *ring, connection *c) {
@@ -297,7 +296,7 @@ static int serve(int server_sock) {
       case READ: {
         int bytes_read = cqe->res;
         if (bytes_read <= 0) {
-          if (cqe->res < 0 && cqe->res != -ECONNRESET) {
+          if (bytes_read < 0) {
             fprintf(stderr, "recv error: %s\n", strerror(-cqe->res));
           }
           prep_close(&ring, c);
@@ -331,20 +330,18 @@ static int serve(int server_sock) {
                                   "%s",
                                   http_date_buf, SERVER,
                                   sizeof(RESPONSE_BODY) - 1, RESPONSE_BODY);
-          struct io_uring_sqe *sqe =
-              prep_send(&ring, c->fd, c, resp_len, MSG_WAITALL);
-          sqe->flags |= IOSQE_IO_LINK;
-          if (c->closing) {
-            prep_close(&ring, c);
-          } else {
-            prep_recv(&ring, c->fd, c);
-          }
+          prep_send(&ring, c->fd, c, resp_len);
         }
         break;
       }
       case WRITE:
         if (cqe->res < 0) {
           fprintf(stderr, "send error: %s\n", strerror(-cqe->res));
+        }
+        if (c->closing) {
+          prep_close(&ring, c);
+        } else {
+          prep_recv(&ring, c->fd, c);
         }
         break;
       case CLOSE:
