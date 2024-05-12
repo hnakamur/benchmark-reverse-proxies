@@ -121,7 +121,7 @@ static void prep_accept(struct io_uring *ring, int fd,
   struct io_uring_sqe *sqe;
 
   sqe = io_uring_get_sqe(ring);
-  io_uring_prep_accept(sqe, fd, client_addr, client_addr_len, SOCK_NONBLOCK);
+  io_uring_prep_accept(sqe, fd, client_addr, client_addr_len, 0);
 
   c->fd = fd;
   c->type = ACCEPT;
@@ -280,10 +280,10 @@ static int serve(int server_sock) {
           fprintf(stderr, "accept error: %s\n", strerror(-cqe->res));
         } else {
           prep_recv(&ring, client_sock, c);
-          c = get_connection(&free_connections, &free_connection_n);
         }
+        connection *c2 = get_connection(&free_connections, &free_connection_n);
         prep_accept(&ring, server_sock, (struct sockaddr *)&client_addr,
-                    &client_addr_len, c);
+                    &client_addr_len, c2);
         break;
       }
       case READ: {
