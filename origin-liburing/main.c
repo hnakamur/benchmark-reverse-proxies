@@ -22,7 +22,6 @@
 
 #define LISTEN_PORT 3000
 #define LISTEN_BACKLOG 511
-#define THREAD_POOL_SIZE 24
 #define WORKER_CONNECTIONS 1024
 #define BUF_SIZE 1024
 #define RESPONSE_BODY "Hello, world!\n"
@@ -340,14 +339,21 @@ static void *thread_func(void *arg) {
   return NULL;
 }
 
+static long get_logical_cpu_cores() { return sysconf(_SC_NPROCESSORS_ONLN); }
+
 int main(int argc, char *argv[]) {
   int ret;
   struct sockaddr_in addr;
-  pthread_t threads[THREAD_POOL_SIZE];
+  int thread_count = get_logical_cpu_cores();
+  pthread_t *threads = malloc(sizeof(pthread_t) * thread_count);
+  if (threads == NULL) {
+    fprintf(stderr, "cannot allocate threads\n");
+    exit(EXIT_FAILURE);
+  }
 
   int32_t server_sock = listen_socket(&addr, LISTEN_PORT);
 
-  for (int i = 0; i < THREAD_POOL_SIZE; i++) {
+  for (int i = 0; i < thread_count; i++) {
     ret = pthread_create(&threads[i], NULL, thread_func, (void *)&server_sock);
     if (ret != 0) {
       perror("Create thread failed");
@@ -355,7 +361,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  for (int i = 0; i < THREAD_POOL_SIZE; i++) {
+  for (int i = 0; i < thread_count; i++) {
     ret = pthread_join(threads[i], NULL);
     if (ret != 0) {
       perror("Join thread failed");
