@@ -20,7 +20,6 @@
 #define MAX_EVENTS 512
 #define BUF_SIZE 1024
 #define PORT 3000
-#define THREAD_POOL_SIZE 24
 #define WORKER_CONNECTIONS 1024
 #define RESPONSE_BODY "Hello, world!\n"
 #define SERVER "origin-c-epoll"
@@ -321,11 +320,18 @@ void *handle_client(void *arg) {
   }
 }
 
+static long get_logical_cpu_cores() { return sysconf(_SC_NPROCESSORS_ONLN); }
+
 int main() {
   int server_fd, epoll_fd, rc, i, reuseaddr;
   struct sockaddr_in server_addr;
   unsigned long nb;
-  pthread_t threads[THREAD_POOL_SIZE];
+  int thread_count = get_logical_cpu_cores();
+  pthread_t *threads = malloc(sizeof(pthread_t) * thread_count);
+  if (threads == NULL) {
+    fprintf(stderr, "cannot allocate threads\n");
+    exit(EXIT_FAILURE);
+  }
 
   server_fd = socket(AF_INET, SOCK_STREAM, 0);
   // printf("server_fd=%d\n", server_fd);
@@ -367,7 +373,7 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
-  for (int i = 0; i < THREAD_POOL_SIZE; i++) {
+  for (int i = 0; i < thread_count; i++) {
     rc = pthread_create(&threads[i], NULL, handle_client, (void *)&server_fd);
     if (rc != 0) {
       perror("Create thread failed");
@@ -375,7 +381,7 @@ int main() {
     }
   }
 
-  for (int i = 0; i < THREAD_POOL_SIZE; i++) {
+  for (int i = 0; i < thread_count; i++) {
     rc = pthread_join(threads[i], NULL);
     if (rc != 0) {
       perror("Join thread failed");
