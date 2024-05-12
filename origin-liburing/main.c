@@ -112,13 +112,13 @@ static int listen_socket(struct sockaddr_in *addr, int port) {
   return fd;
 }
 
-static void prep_multishot_accept(struct io_uring *ring, int fd,
-                                  struct sockaddr *client_addr,
-                                  socklen_t *client_addr_len, connection *c) {
+static void prep_accept(struct io_uring *ring, int fd,
+                        struct sockaddr *client_addr,
+                        socklen_t *client_addr_len, connection *c) {
   struct io_uring_sqe *sqe;
 
   sqe = io_uring_get_sqe(ring);
-  io_uring_prep_multishot_accept(sqe, fd, client_addr, client_addr_len, 0);
+  io_uring_prep_accept(sqe, fd, client_addr, client_addr_len, 0);
 
   c->fd = fd;
   c->type = ACCEPT;
@@ -270,8 +270,8 @@ static int serve(int server_sock) {
 
   connection *accept_conn =
       get_connection(&free_connections, &free_connection_n);
-  prep_multishot_accept(&ring, server_sock, (struct sockaddr *)&client_addr,
-                        &client_addr_len, accept_conn);
+  prep_accept(&ring, server_sock, (struct sockaddr *)&client_addr,
+              &client_addr_len, accept_conn);
   while (1) {
     io_uring_submit_and_wait(&ring, 1);
 
@@ -283,12 +283,6 @@ static int serve(int server_sock) {
       connection *c = (connection *)io_uring_cqe_get_data(cqe);
       switch (c->type) {
       case ACCEPT: {
-        if (!(cqe->flags & IORING_CQE_F_MORE)) {
-          printf("re-arm accept\n");
-          prep_multishot_accept(&ring, server_sock,
-                                (struct sockaddr *)&client_addr,
-                                &client_addr_len, accept_conn);
-        }
         int client_sock = cqe->res;
         if (client_sock < 0) {
           fprintf(stderr, "accept error: %s\n", strerror(-cqe->res));
@@ -296,6 +290,8 @@ static int serve(int server_sock) {
           c = get_connection(&free_connections, &free_connection_n);
           prep_recv(&ring, client_sock, c);
         }
+        prep_accept(&ring, server_sock, (struct sockaddr *)&client_addr,
+                    &client_addr_len, accept_conn);
         break;
       }
       case READ: {
