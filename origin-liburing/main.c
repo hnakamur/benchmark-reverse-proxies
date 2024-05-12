@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <pthread.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -21,6 +22,7 @@
 
 #define LISTEN_PORT 3000
 #define LISTEN_BACKLOG 511
+#define THREAD_POOL_SIZE 24
 #define WORKER_CONNECTIONS 1024
 #define BUF_SIZE 1024
 #define RESPONSE_BODY "Hello, world!\n"
@@ -332,11 +334,35 @@ static int serve(int server_sock) {
   return ret;
 }
 
+static void *thread_func(void *arg) {
+  int server_sock = *(int *)arg;
+  serve(server_sock);
+  return NULL;
+}
+
 int main(int argc, char *argv[]) {
   int ret;
   struct sockaddr_in addr;
+  pthread_t threads[THREAD_POOL_SIZE];
 
   int32_t server_sock = listen_socket(&addr, LISTEN_PORT);
+
+  for (int i = 0; i < THREAD_POOL_SIZE; i++) {
+    ret = pthread_create(&threads[i], NULL, thread_func, (void *)&server_sock);
+    if (ret != 0) {
+      perror("Create thread failed");
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  for (int i = 0; i < THREAD_POOL_SIZE; i++) {
+    ret = pthread_join(threads[i], NULL);
+    if (ret != 0) {
+      perror("Join thread failed");
+      exit(EXIT_FAILURE);
+    }
+  }
+
   ret = serve(server_sock);
   assert(ret == 0);
   close(server_sock);
