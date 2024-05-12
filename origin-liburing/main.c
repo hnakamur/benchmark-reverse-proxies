@@ -35,7 +35,6 @@ typedef unsigned char u_char;
 enum {
   ACCEPT,
   READ,
-  WRITE,
 };
 
 typedef struct connection connection;
@@ -44,7 +43,7 @@ typedef struct connection {
   connection *next;
   int32_t fd;
   uint16_t type;
-  uint16_t closing;
+  uint16_t nodelay_set;
   u_char buf[BUF_SIZE];
 } connection;
 
@@ -124,7 +123,7 @@ static void prep_accept(struct io_uring *ring, int fd,
 
   c->fd = fd;
   c->type = ACCEPT;
-  c->closing = 0;
+  c->nodelay_set = 0;
   sqe->user_data = (uint64_t)c;
 }
 
@@ -134,20 +133,6 @@ static void prep_recv(struct io_uring *ring, int fd, connection *c) {
 
   c->fd = fd;
   c->type = READ;
-  sqe->user_data = (uint64_t)c;
-}
-
-static void prep_send(struct io_uring *ring, int fd, connection *c,
-                      size_t len) {
-  struct io_uring_sqe *sqe = io_uring_get_sqe(ring);
-  if (sqe == NULL) {
-    fprintf(stderr, "cannot get sqe in prep_send\n");
-    exit(1);
-  }
-  io_uring_prep_send(sqe, fd, c->buf, len, 0);
-
-  c->fd = fd;
-  c->type = WRITE;
   sqe->user_data = (uint64_t)c;
 }
 
@@ -292,7 +277,7 @@ static int serve(int server_sock) {
           }
           close_connection(c, &free_connections, &free_connection_n);
         } else {
-          c->closing = has_connection_close(c->buf, bytes_read);
+          int closing = has_connection_close(c->buf, bytes_read);
           now = get_now();
           if (now != prev_now) {
             http_date_len = format_http_date(now, http_date_buf);
@@ -311,20 +296,32 @@ static int serve(int server_sock) {
                                   "%s",
                                   http_date_buf, SERVER,
                                   sizeof(RESPONSE_BODY) - 1, RESPONSE_BODY);
-          prep_send(&ring, c->fd, c, resp_len);
+          struct iovec iov;
+          iov.iov_base = c->buf;
+          iov.iov_len = resp_len;
+          if (writev(c->fd, &iov, 1) == -1) {
+            perror("writev");
+            close_connection(c, &free_connections, &free_connection_n);
+            continue;
+          }
+          if (closing) {
+            close_connection(c, &free_connections, &free_connection_n);
+          } else {
+            if (c->nodelay_set == 0) {
+              int tcp_nodelay = 1;
+              if (setsockopt(c->fd, IPPROTO_TCP, TCP_NODELAY,
+                             (const void *)&tcp_nodelay, sizeof(int)) == -1) {
+                perror("setsockopt TCP_NODELAY: client_fd");
+                close_connection(c, &free_connections, &free_connection_n);
+                continue;
+              }
+              c->nodelay_set = 1;
+            }
+            prep_recv(&ring, c->fd, c);
+          }
         }
         break;
       }
-      case WRITE:
-        if (cqe->res < 0) {
-          fprintf(stderr, "send error: %s\n", strerror(-cqe->res));
-        }
-        if (c->closing) {
-          close_connection(c, &free_connections, &free_connection_n);
-        } else {
-          prep_recv(&ring, c->fd, c);
-        }
-        break;
       }
     }
     io_uring_cq_advance(&ring, count);
