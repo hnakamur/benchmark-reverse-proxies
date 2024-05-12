@@ -23,6 +23,13 @@
 #define LISTEN_BACKLOG 511
 #define WORKER_CONNECTIONS 1024
 #define BUF_SIZE 1024
+#define RESPONSE_BODY "Hello, world!\n"
+#define SERVER "origin-liburing"
+#define HTTP_DATE_BUF_LEN sizeof("Sun, 06 Nov 1994 08:49:37 GMT")
+
+typedef int ngx_int_t;
+typedef unsigned int ngx_uint_t;
+typedef unsigned char u_char;
 
 enum {
   ACCEPT,
@@ -36,8 +43,8 @@ typedef struct connection {
   connection *next;
   int32_t fd;
   uint16_t type;
-  uint16_t padding;
-  char buf[BUF_SIZE];
+  uint16_t closing;
+  u_char buf[BUF_SIZE];
 } connection;
 
 static connection connections[WORKER_CONNECTIONS];
@@ -69,7 +76,10 @@ static connection *get_connection() {
   connection *c;
 
   c = free_connections;
-  assert(c != NULL);
+  if (c == NULL) {
+    fprintf(stderr, "worker_connections are not enough\n");
+    return NULL;
+  }
   free_connections = c->next;
   free_connection_n--;
   return c;
@@ -115,7 +125,9 @@ static void prep_accept(struct io_uring *ring, int fd,
   io_uring_prep_accept(sqe, fd, client_addr, client_addr_len, 0);
 
   connection *c = get_connection();
-  c->fd = fd, c->type = ACCEPT;
+  c->fd = fd;
+  c->type = ACCEPT;
+  c->closing = 0;
   sqe->user_data = (uint64_t)c;
 }
 
@@ -131,6 +143,10 @@ static void prep_recv(struct io_uring *ring, int fd, connection *c) {
 static void prep_send(struct io_uring *ring, int fd, connection *c,
                       size_t len) {
   struct io_uring_sqe *sqe = io_uring_get_sqe(ring);
+  if (sqe == NULL) {
+    fprintf(stderr, "cannot get sqe in prep_send\n");
+    exit(1);
+  }
   io_uring_prep_send(sqe, fd, c->buf, len, 0);
 
   c->fd = fd;
@@ -138,10 +154,95 @@ static void prep_send(struct io_uring *ring, int fd, connection *c,
   sqe->user_data = (uint64_t)c;
 }
 
+ngx_int_t ngx_strncasecmp(u_char *s1, u_char *s2, size_t n) {
+  ngx_uint_t c1, c2;
+
+  while (n) {
+    c1 = (ngx_uint_t)*s1++;
+    c2 = (ngx_uint_t)*s2++;
+
+    c1 = (c1 >= 'A' && c1 <= 'Z') ? (c1 | 0x20) : c1;
+    c2 = (c2 >= 'A' && c2 <= 'Z') ? (c2 | 0x20) : c2;
+
+    if (c1 == c2) {
+
+      if (c1) {
+        n--;
+        continue;
+      }
+
+      return 0;
+    }
+
+    return c1 - c2;
+  }
+
+  return 0;
+}
+
+/*
+ * ngx_strlcasestrn() is intended to search for static substring
+ * with known length in string until the argument last. The argument n
+ * must be length of the second substring - 1.
+ */
+
+u_char *ngx_strlcasestrn(u_char *s1, u_char *last, u_char *s2, size_t n) {
+  ngx_uint_t c1, c2;
+
+  c2 = (ngx_uint_t)*s2++;
+  c2 = (c2 >= 'A' && c2 <= 'Z') ? (c2 | 0x20) : c2;
+  last -= n;
+
+  do {
+    do {
+      if (s1 >= last) {
+        return NULL;
+      }
+
+      c1 = (ngx_uint_t)*s1++;
+
+      c1 = (c1 >= 'A' && c1 <= 'Z') ? (c1 | 0x20) : c1;
+
+    } while (c1 != c2);
+
+  } while (ngx_strncasecmp(s1, s2, n) != 0);
+
+  return --s1;
+}
+
+#define CONNECTION_CLOSE "\r\nConnection: close\r\n"
+
+static int has_connection_close(u_char *req, int n) {
+  return ngx_strlcasestrn(req, req + n, (u_char *)CONNECTION_CLOSE,
+                          sizeof(CONNECTION_CLOSE) - 2) != NULL;
+}
+
+static time_t get_now() {
+  struct timeval tv;
+
+  gettimeofday(&tv, NULL);
+  return tv.tv_sec;
+}
+
+static int format_http_date(time_t now, char buffer[HTTP_DATE_BUF_LEN]) {
+  struct tm *tm;
+
+  tm = gmtime(&now);
+  if (tm == NULL) {
+    perror("gmtime failed");
+    return -1;
+  }
+  return (int)strftime(buffer, HTTP_DATE_BUF_LEN, "%a, %d %b %Y %H:%M:%S GMT",
+                       tm);
+}
+
 static int serve(struct io_uring *ring, int server_sock) {
   int ret = 0;
   struct sockaddr_in client_addr;
   socklen_t client_addr_len = sizeof(client_addr);
+  char http_date_buf[HTTP_DATE_BUF_LEN];
+  int http_date_len;
+  time_t now, prev_now = 0;
 
   init_connections(connections, connection_n);
 
@@ -176,7 +277,26 @@ static int serve(struct io_uring *ring, int server_sock) {
           }
           close_connection(c);
         } else {
-          prep_send(ring, c->fd, c, bytes_read);
+          c->closing = has_connection_close(c->buf, bytes_read);
+          now = get_now();
+          if (now != prev_now) {
+            http_date_len = format_http_date(now, http_date_buf);
+            if (http_date_len == -1) {
+              continue;
+            }
+            prev_now = now;
+          }
+          int resp_len = snprintf((char *)c->buf, sizeof(c->buf),
+                                  "HTTP/1.1 200 OK\r\n"
+                                  "Date: %s\r\n"
+                                  "Server: %s\r\n"
+                                  "Content-Type: text/plain\r\n"
+                                  "Content-Length: %ld\r\n"
+                                  "\r\n"
+                                  "%s",
+                                  http_date_buf, SERVER,
+                                  sizeof(RESPONSE_BODY) - 1, RESPONSE_BODY);
+          prep_send(ring, c->fd, c, resp_len);
         }
         break;
       }
@@ -184,7 +304,11 @@ static int serve(struct io_uring *ring, int server_sock) {
         if (cqe->res < 0) {
           fprintf(stderr, "send error: %s\n", strerror(-cqe->res));
         }
-        prep_recv(ring, c->fd, c);
+        if (c->closing) {
+          close_connection(c);
+        } else {
+          prep_recv(ring, c->fd, c);
+        }
         break;
       }
     }
@@ -199,7 +323,7 @@ int main(int argc, char *argv[]) {
   struct io_uring ring;
   struct sockaddr_in addr;
 
-  ret = io_uring_queue_init(32, &ring, 0);
+  ret = io_uring_queue_init(2048, &ring, 0);
   assert(ret >= 0);
 
   int32_t server_sock = listen_socket(&addr, LISTEN_PORT);
