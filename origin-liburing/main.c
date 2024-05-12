@@ -47,14 +47,8 @@ typedef struct connection {
   u_char buf[BUF_SIZE];
 } connection;
 
-static connection connections[WORKER_CONNECTIONS];
-static int connection_n = WORKER_CONNECTIONS;
-
-static connection *free_connections = &connections[0];
-static int free_connection_n = WORKER_CONNECTIONS;
-
-static void init_connections() {
-  uint16_t i;
+static void init_connections(connection *connections, int connection_n) {
+  int i;
   connection *c, *next;
 
   i = connection_n;
@@ -72,27 +66,30 @@ static void init_connections() {
   } while (i);
 }
 
-static connection *get_connection() {
+static connection *get_connection(connection **free_connections,
+                                  int *free_connection_n) {
   connection *c;
 
-  c = free_connections;
+  c = *free_connections;
   if (c == NULL) {
     fprintf(stderr, "worker_connections are not enough\n");
     return NULL;
   }
-  free_connections = c->next;
-  free_connection_n--;
+  *free_connections = c->next;
+  (*free_connection_n)--;
   return c;
 }
 
-static void free_connection(connection *c) {
-  c->next = free_connections;
-  free_connections = c;
-  free_connection_n++;
+static void free_connection(connection *c, connection **free_connections,
+                            int *free_connection_n) {
+  c->next = *free_connections;
+  *free_connections = c;
+  (*free_connection_n)++;
 }
 
-static void close_connection(connection *c) {
-  free_connection(c);
+static void close_connection(connection *c, connection **free_connections,
+                             int *free_connection_n) {
+  free_connection(c, free_connections, free_connection_n);
   close(c->fd);
 }
 
@@ -118,13 +115,12 @@ static int listen_socket(struct sockaddr_in *addr, int port) {
 
 static void prep_accept(struct io_uring *ring, int fd,
                         struct sockaddr *client_addr,
-                        socklen_t *client_addr_len) {
+                        socklen_t *client_addr_len, connection *c) {
   struct io_uring_sqe *sqe;
 
   sqe = io_uring_get_sqe(ring);
   io_uring_prep_accept(sqe, fd, client_addr, client_addr_len, 0);
 
-  connection *c = get_connection();
   c->fd = fd;
   c->type = ACCEPT;
   c->closing = 0;
@@ -236,25 +232,42 @@ static int format_http_date(time_t now, char buffer[HTTP_DATE_BUF_LEN]) {
                        tm);
 }
 
-static int serve(struct io_uring *ring, int server_sock) {
+static int serve(int server_sock) {
   int ret = 0;
+  struct io_uring ring;
   struct sockaddr_in client_addr;
   socklen_t client_addr_len = sizeof(client_addr);
   char http_date_buf[HTTP_DATE_BUF_LEN];
   int http_date_len;
   time_t now, prev_now = 0;
 
-  init_connections(connections, connection_n);
+  ret = io_uring_queue_init(2048, &ring, 0);
+  if (ret < 0) {
+    fprintf(stderr, "init ring error: %s\n", strerror(-ret));
+    return ret;
+  }
 
-  prep_accept(ring, server_sock, (struct sockaddr *)&client_addr,
-              &client_addr_len);
+  connection *connections = malloc(sizeof(connection) * WORKER_CONNECTIONS);
+  if (connections == NULL) {
+    fprintf(stderr, "cannot alloc connections\n");
+    return -1;
+  }
+  int connection_n = WORKER_CONNECTIONS;
+
+  init_connections(connections, connection_n);
+  connection *free_connections = &connections[0];
+  int free_connection_n = WORKER_CONNECTIONS;
+
+  connection *c = get_connection(&free_connections, &free_connection_n);
+  prep_accept(&ring, server_sock, (struct sockaddr *)&client_addr,
+              &client_addr_len, c);
   while (1) {
-    io_uring_submit_and_wait(ring, 1);
+    io_uring_submit_and_wait(&ring, 1);
 
     struct io_uring_cqe *cqe;
     unsigned head;
     unsigned count = 0;
-    io_uring_for_each_cqe(ring, head, cqe) {
+    io_uring_for_each_cqe(&ring, head, cqe) {
       ++count;
       connection *c = (connection *)cqe->user_data;
       switch (c->type) {
@@ -263,10 +276,11 @@ static int serve(struct io_uring *ring, int server_sock) {
         if (client_sock < 0) {
           fprintf(stderr, "accept error: %s\n", strerror(-cqe->res));
         } else {
-          prep_recv(ring, client_sock, c);
+          prep_recv(&ring, client_sock, c);
         }
-        prep_accept(ring, server_sock, (struct sockaddr *)&client_addr,
-                    &client_addr_len);
+        connection *c2 = get_connection(&free_connections, &free_connection_n);
+        prep_accept(&ring, server_sock, (struct sockaddr *)&client_addr,
+                    &client_addr_len, c2);
         break;
       }
       case READ: {
@@ -275,7 +289,7 @@ static int serve(struct io_uring *ring, int server_sock) {
           if (bytes_read < 0) {
             fprintf(stderr, "recv error: %s\n", strerror(-cqe->res));
           }
-          close_connection(c);
+          close_connection(c, &free_connections, &free_connection_n);
         } else {
           c->closing = has_connection_close(c->buf, bytes_read);
           now = get_now();
@@ -296,7 +310,7 @@ static int serve(struct io_uring *ring, int server_sock) {
                                   "%s",
                                   http_date_buf, SERVER,
                                   sizeof(RESPONSE_BODY) - 1, RESPONSE_BODY);
-          prep_send(ring, c->fd, c, resp_len);
+          prep_send(&ring, c->fd, c, resp_len);
         }
         break;
       }
@@ -305,14 +319,14 @@ static int serve(struct io_uring *ring, int server_sock) {
           fprintf(stderr, "send error: %s\n", strerror(-cqe->res));
         }
         if (c->closing) {
-          close_connection(c);
+          close_connection(c, &free_connections, &free_connection_n);
         } else {
-          prep_recv(ring, c->fd, c);
+          prep_recv(&ring, c->fd, c);
         }
         break;
       }
     }
-    io_uring_cq_advance(ring, count);
+    io_uring_cq_advance(&ring, count);
   }
 
   return ret;
@@ -320,17 +334,11 @@ static int serve(struct io_uring *ring, int server_sock) {
 
 int main(int argc, char *argv[]) {
   int ret;
-  struct io_uring ring;
   struct sockaddr_in addr;
 
-  ret = io_uring_queue_init(2048, &ring, 0);
-  assert(ret >= 0);
-
   int32_t server_sock = listen_socket(&addr, LISTEN_PORT);
-  ret = serve(&ring, server_sock);
+  ret = serve(server_sock);
   assert(ret == 0);
   close(server_sock);
-
-  io_uring_queue_exit(&ring);
   return ret;
 }
