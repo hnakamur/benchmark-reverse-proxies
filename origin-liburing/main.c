@@ -42,11 +42,11 @@ enum {
 typedef struct connection connection;
 
 typedef struct connection {
-  connection *next;
-  int32_t fd;
   uint16_t type;
   uint8_t closing;
   uint8_t nodelay_set;
+  connection *next;
+  int32_t fd;
   u_char buf[BUF_SIZE];
 } connection;
 
@@ -80,6 +80,8 @@ static connection *get_connection(connection **free_connections,
   }
   *free_connections = c->next;
   (*free_connection_n)--;
+  c->closing = 0;
+  c->nodelay_set = 0;
   return c;
 }
 
@@ -110,18 +112,16 @@ static int listen_socket(struct sockaddr_in *addr, int port) {
   return fd;
 }
 
-static void prep_accept(struct io_uring *ring, int fd,
-                        struct sockaddr *client_addr,
-                        socklen_t *client_addr_len, connection *c) {
+static void prep_multishot_accept(struct io_uring *ring, int fd,
+                                  struct sockaddr *client_addr,
+                                  socklen_t *client_addr_len, connection *c) {
   struct io_uring_sqe *sqe;
 
   sqe = io_uring_get_sqe(ring);
-  io_uring_prep_accept(sqe, fd, client_addr, client_addr_len, 0);
+  io_uring_prep_multishot_accept(sqe, fd, client_addr, client_addr_len, 0);
 
   c->fd = fd;
   c->type = ACCEPT;
-  c->closing = 0;
-  c->nodelay_set = 0;
   io_uring_sqe_set_data(sqe, c);
 }
 
@@ -268,9 +268,10 @@ static int serve(int server_sock) {
   connection *free_connections = &connections[0];
   int free_connection_n = WORKER_CONNECTIONS;
 
-  connection *c = get_connection(&free_connections, &free_connection_n);
-  prep_accept(&ring, server_sock, (struct sockaddr *)&client_addr,
-              &client_addr_len, c);
+  connection *accept_conn =
+      get_connection(&free_connections, &free_connection_n);
+  prep_multishot_accept(&ring, server_sock, (struct sockaddr *)&client_addr,
+                        &client_addr_len, accept_conn);
   while (1) {
     io_uring_submit_and_wait(&ring, 1);
 
@@ -282,15 +283,19 @@ static int serve(int server_sock) {
       connection *c = (connection *)io_uring_cqe_get_data(cqe);
       switch (c->type) {
       case ACCEPT: {
+        if (!(cqe->flags & IORING_CQE_F_MORE)) {
+          printf("re-arm accept\n");
+          prep_multishot_accept(&ring, server_sock,
+                                (struct sockaddr *)&client_addr,
+                                &client_addr_len, accept_conn);
+        }
         int client_sock = cqe->res;
         if (client_sock < 0) {
           fprintf(stderr, "accept error: %s\n", strerror(-cqe->res));
         } else {
+          c = get_connection(&free_connections, &free_connection_n);
           prep_recv(&ring, client_sock, c);
         }
-        connection *c2 = get_connection(&free_connections, &free_connection_n);
-        prep_accept(&ring, server_sock, (struct sockaddr *)&client_addr,
-                    &client_addr_len, c2);
         break;
       }
       case READ: {
