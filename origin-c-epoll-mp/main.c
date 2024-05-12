@@ -20,7 +20,6 @@
 #define MAX_EVENTS 512
 #define BUF_SIZE 1024
 #define PORT 3000
-#define WORKER_POOL_SIZE 24
 #define WORKER_CONNECTIONS 1024
 #define RESPONSE_BODY "Hello, world!\n"
 #define SERVER "origin-c-epoll-mp"
@@ -132,7 +131,7 @@ static ngx_connection_t *get_connection(ngx_connection_t **free_connections,
 
   c = *free_connections;
   if (c == NULL) {
-    fprintf(stderr, "worker_connections are not enought\n");
+    fprintf(stderr, "worker_connections are not enough\n");
     return NULL;
   }
   *free_connections = c->data;
@@ -322,11 +321,13 @@ void *handle_client(void *arg) {
   }
 }
 
+static long get_logical_cpu_cores() { return sysconf(_SC_NPROCESSORS_ONLN); }
+
 int main() {
   int server_fd, epoll_fd, rc, i, reuseaddr, status;
   struct sockaddr_in server_addr;
   unsigned long nb;
-  pid_t pid, child_pids[WORKER_POOL_SIZE];
+  pid_t pid;
 
   server_fd = socket(AF_INET, SOCK_STREAM, 0);
   // printf("server_fd=%d\n", server_fd);
@@ -368,7 +369,15 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
-  for (int i = 0; i < WORKER_POOL_SIZE; i++) {
+  int child_count = get_logical_cpu_cores();
+  pid_t *child_pids = malloc(sizeof(pid_t) * child_count);
+  if (child_pids == NULL) {
+    perror("cannot alloc child_pids");
+    close(server_fd);
+    exit(EXIT_FAILURE);
+  }
+
+  for (int i = 0; i < child_count; i++) {
     pid = fork();
     switch (pid) {
     case 0:
@@ -382,7 +391,7 @@ int main() {
     }
   }
 
-  for (int i = 0; i < WORKER_POOL_SIZE; i++) {
+  for (int i = 0; i < child_count; i++) {
     pid = wait(&status);
     if (pid == -1) {
       perror("wait worker process failed");

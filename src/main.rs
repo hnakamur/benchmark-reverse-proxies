@@ -22,8 +22,8 @@ fn main() {
     let origins = [
         // Server::Rust(String::from("origin-actix")),
         // Server::Nginx(String::from("origin-nginx")),
-        Server::Rust(String::from("origin-c-epoll")),
-        // Server::MultiProcess(String::from("origin-c-epoll-mp")),
+        // Server::Rust(String::from("origin-c-epoll")),
+        Server::MultiProcess(String::from("origin-c-epoll-mp")),
         // Server::Rust(String::from("origin-c-sync")),
         // Server::Rust(String::from("origin-heph")),
         // Server::Rust(String::from("origin-hyper")),
