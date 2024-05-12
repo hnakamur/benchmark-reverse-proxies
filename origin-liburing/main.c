@@ -44,7 +44,8 @@ typedef struct connection {
   connection *next;
   int32_t fd;
   uint16_t type;
-  uint16_t closing;
+  uint8_t closing;
+  uint8_t nodelay_set;
   u_char buf[BUF_SIZE];
 } connection;
 
@@ -125,6 +126,7 @@ static void prep_accept(struct io_uring *ring, int fd,
   c->fd = fd;
   c->type = ACCEPT;
   c->closing = 0;
+  c->nodelay_set = 0;
   sqe->user_data = (uint64_t)c;
 }
 
@@ -293,6 +295,16 @@ static int serve(int server_sock) {
           close_connection(c, &free_connections, &free_connection_n);
         } else {
           c->closing = has_connection_close(c->buf, bytes_read);
+          if (!c->closing && !c->nodelay_set) {
+            int tcp_nodelay = 1;
+            if (setsockopt(c->fd, IPPROTO_TCP, TCP_NODELAY,
+                           (const void *)&tcp_nodelay, sizeof(int)) == -1) {
+              perror("setsockopt TCP_NODELAY: client_fd");
+              close_connection(c, &free_connections, &free_connection_n);
+              continue;
+            }
+            c->nodelay_set = 1;
+          }
           now = get_now();
           if (now != prev_now) {
             http_date_len = format_http_date(now, http_date_buf);
