@@ -36,6 +36,7 @@ enum {
   ACCEPT,
   READ,
   WRITE,
+  CLOSE,
 };
 
 typedef struct connection connection;
@@ -87,12 +88,6 @@ static void free_connection(connection *c, connection **free_connections,
   c->next = *free_connections;
   *free_connections = c;
   (*free_connection_n)++;
-}
-
-static void close_connection(connection *c, connection **free_connections,
-                             int *free_connection_n) {
-  free_connection(c, free_connections, free_connection_n);
-  close(c->fd);
 }
 
 static int listen_socket(struct sockaddr_in *addr, int port) {
@@ -150,6 +145,18 @@ static void prep_send(struct io_uring *ring, int fd, connection *c,
 
   c->fd = fd;
   c->type = WRITE;
+  sqe->user_data = (uint64_t)c;
+}
+
+static void prep_close(struct io_uring *ring, connection *c) {
+  struct io_uring_sqe *sqe = io_uring_get_sqe(ring);
+  if (sqe == NULL) {
+    fprintf(stderr, "cannot get sqe in prep_close\n");
+    exit(1);
+  }
+  io_uring_prep_close(sqe, c->fd);
+
+  c->type = CLOSE;
   sqe->user_data = (uint64_t)c;
 }
 
@@ -292,7 +299,7 @@ static int serve(int server_sock) {
           if (bytes_read < 0) {
             fprintf(stderr, "recv error: %s\n", strerror(-cqe->res));
           }
-          close_connection(c, &free_connections, &free_connection_n);
+          prep_close(&ring, c);
         } else {
           c->closing = has_connection_close(c->buf, bytes_read);
           if (!c->closing && !c->nodelay_set) {
@@ -300,7 +307,7 @@ static int serve(int server_sock) {
             if (setsockopt(c->fd, IPPROTO_TCP, TCP_NODELAY,
                            (const void *)&tcp_nodelay, sizeof(int)) == -1) {
               perror("setsockopt TCP_NODELAY: client_fd");
-              close_connection(c, &free_connections, &free_connection_n);
+              prep_close(&ring, c);
               continue;
             }
             c->nodelay_set = 1;
@@ -332,10 +339,13 @@ static int serve(int server_sock) {
           fprintf(stderr, "send error: %s\n", strerror(-cqe->res));
         }
         if (c->closing) {
-          close_connection(c, &free_connections, &free_connection_n);
+          prep_close(&ring, c);
         } else {
           prep_recv(&ring, c->fd, c);
         }
+        break;
+      case CLOSE:
+        free_connection(c, &free_connections, &free_connection_n);
         break;
       }
     }
