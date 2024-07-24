@@ -27,10 +27,10 @@ fn main() {
         // Server::Rust(String::from("origin-c-sync")),
         // Server::Rust(String::from("origin-heph")),
         // Server::Rust(String::from("origin-hyper")),
-        Server::Rust(String::from("origin-liburing")),
+        // Server::Rust(String::from("origin-liburing")),
         // Server::Rust(String::from("origin-ntex")),
         // Server::Rust(String::from("origin-monoio")),
-        // Server::Rust(String::from("origin-pingora")),
+        Server::Rust(String::from("origin-pingora")),
         // Server::Rust(String::from("origin-tokio")),
         // Server::Rust(String::from("origin-toysync")),
         // Server::Zig(String::from("origin-zap")),
@@ -39,16 +39,16 @@ fn main() {
         bench_http_origin(&origin).unwrap();
     }
 
-    // let proxies = [
-    //     Server::Rust(String::from("proxy-actix")),
-    //     Server::Rust(String::from("proxy-hyper")),
-    //     Server::Rust(String::from("proxy-pingora")),
-    //     Server::Nginx(String::from("proxy-nginx")),
-    // ];
-    // let origin = Server::Nginx(String::from("origin-nginx"));
-    // for proxy in proxies {
-    //     bench_http_proxy(&proxy, &origin).unwrap();
-    // }
+    let proxies = [
+        // Server::Rust(String::from("proxy-actix")),
+        // Server::Rust(String::from("proxy-hyper")),
+        Server::Rust(String::from("proxy-pingora")),
+        // Server::Nginx(String::from("proxy-nginx")),
+    ];
+    let origin = Server::Nginx(String::from("origin-nginx"));
+    for proxy in proxies {
+        bench_http_proxy(&proxy, &origin).unwrap();
+    }
 
     cpu_power("powersave").unwrap();
 }

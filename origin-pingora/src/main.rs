@@ -39,14 +39,8 @@ impl ServerApp for HelloApp {
     }
 }
 
-impl HelloApp {
-    pub fn new() -> Arc<Self> {
-        Arc::new(HelloApp {})
-    }
-}
-
 pub fn hello_service() -> ListeningService<HelloApp> {
-    ListeningService::new("Hello Service HTTP".to_string(), HelloApp::new())
+    ListeningService::new("Hello Service HTTP".to_string(), HelloApp)
 }
 
 fn main() {
