@@ -1,4 +1,4 @@
-#define _GNU_SOURCE /* for accept4 and memmem */
+#define _GNU_SOURCE /* for accept4 */
 #include <errno.h>
 #include <linux/net.h>
 #include <linux/tcp.h>
@@ -65,15 +65,23 @@ static char *trim_left_space(char *s, int n) {
 #define CLOSE "close"
 #define CLOSE_LEN (sizeof(CLOSE) - 1)
 
+static char *find_crlf(char *s, int n) {
+  char *p = memchr(s, '\r', n);
+  if (p != NULL && p + 1 < s + n && p[1] == '\n') {
+    return p;
+  }
+  return NULL;
+}
+
 static int has_connection_close(char *req, int n) {
   // printf("has_connection_close start, req=[%.*s]\n", n, req);
-  char *field_end = memmem(req, n, "\r\n", 2);
+  char *field_end = find_crlf(req, n);
   if (field_end == NULL) {
     return 0;
   }
   n -= (field_end - req) + 2;
   req = field_end + 2;
-  while ((field_end = memmem(req, n, "\r\n", 2)) != NULL) {
+  while ((field_end = find_crlf(req, n)) != NULL) {
     // printf("=== req=[%.*s], field_end=[%.*s], end_pos=%ld\n", n, req, (int)(n - (field_end - req)), field_end, field_end - req);
     if (field_end == req) {
       break;
@@ -321,11 +329,23 @@ void *handle_client(void *arg) {
 
 static long get_logical_cpu_cores() { return sysconf(_SC_NPROCESSORS_ONLN); }
 
+static long get_num_cpus_from_env() {
+  char *val = getenv("NUM_CPUS");
+  if (val == NULL) {
+    return -1;
+  }
+  return atoi(val);
+}
+
 int main() {
   int server_fd, epoll_fd, rc, i, reuseaddr;
   struct sockaddr_in server_addr;
   unsigned long nb;
-  int thread_count = get_logical_cpu_cores();
+  int thread_count = get_num_cpus_from_env();
+  if (thread_count == -1) {
+    thread_count = get_logical_cpu_cores();
+  }
+  printf("thread_count=%d\n", thread_count);
   pthread_t *threads = malloc(sizeof(pthread_t) * thread_count);
   if (threads == NULL) {
     fprintf(stderr, "cannot allocate threads\n");
