@@ -42,16 +42,6 @@ typedef enum {
   NGX_TCP_NODELAY_DISABLED
 } ngx_connection_tcp_nodelay_e;
 
-static int eq_ignore_ascii_case_literal(char *s, const char *lowcase_literal, int n) {
-  for (int i = 0; i < n; i++) {
-    if ((s[i] | 0x20) != lowcase_literal[i]) {
-      return 0;
-    }
-  }
-  // printf("eq_ignore_ascii_case_literal returns true for [%.*s]\n", n, lowcase_literal);
-  return 1;
-}
-
 static char *trim_left_space(char *s, int n) {
   char *end = s + n;
   while (s < end && *s == ' ') {
@@ -80,32 +70,45 @@ static int has_connection_close(char *req, int n) {
     return 0;
   }
   n -= (field_end - req) + 2;
-  req = field_end + 2;
-  while ((field_end = find_crlf(req, n)) != NULL) {
+  char *p = field_end + 2;
+  while ((field_end = find_crlf(p, n)) != NULL) {
     // printf("=== req=[%.*s], field_end=[%.*s], end_pos=%ld\n", n, req, (int)(n - (field_end - req)), field_end, field_end - req);
-    if (field_end == req) {
+    if (field_end == p) {
       break;
     }
 
-    char *colon = memchr(req, ':', field_end - req);
-    // printf("== colon=[%.*s], colon_pos=%ld\n", (int)(n - (colon - req)), colon, colon - req);
-    if (colon != NULL &&
-        colon - req == CONNECTION_LEN &&
-        eq_ignore_ascii_case_literal(req, CONNECTION, CONNECTION_LEN))
+    if (p + CONNECTION_LEN + 1 < field_end &&
+        (p[0] | 0x20) == 'c' &&
+        (p[1] | 0x20) == 'o' &&
+        (p[2] | 0x20) == 'n' &&
+        (p[3] | 0x20) == 'n' &&
+        (p[4] | 0x20) == 'e' &&
+        (p[5] | 0x20) == 'c' &&
+        (p[6] | 0x20) == 't' &&
+        (p[7] | 0x20) == 'i' &&
+        (p[8] | 0x20) == 'o' &&
+        (p[9] | 0x20) == 'n' &&
+        p[10] == ':')
     {
       // printf("= colon+1=[%.*s]\n", (int)(field_end - colon - 1), colon + 1);
-      char *val = trim_left_space(colon + 1, field_end - colon - 1);
-      int val_len = field_end - val;
+      p += CONNECTION_LEN + 1;
+      p = trim_left_space(p, field_end - p);
       // printf("val=[%.*s]\n", (int)(field_end - val), val);
-      if (val_len >= CLOSE_LEN &&
-          eq_ignore_ascii_case_literal(val, CLOSE, CLOSE_LEN) &&
-          trim_left_space(val + CLOSE_LEN, val_len - CLOSE_LEN) == field_end) {
+      int val_len = field_end - p;
+      if (p + CLOSE_LEN <= field_end &&
+          (p[0] | 0x20) == 'c' &&
+          (p[1] | 0x20) == 'l' &&
+          (p[2] | 0x20) == 'o' &&
+          (p[3] | 0x20) == 's' &&
+          (p[4] | 0x20) == 'e' &&
+          trim_left_space(p + CLOSE_LEN, val_len - CLOSE_LEN) == field_end)
+      {
         return 1;
       }
     }
 
-    n -= (field_end - req) + 2;
-    req = field_end + 2;
+    n -= (field_end - p) + 2;
+    p = field_end + 2;
   }
   return 0;
 }
