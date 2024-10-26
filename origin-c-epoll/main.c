@@ -1,4 +1,4 @@
-#define _GNU_SOURCE /* for accept4 */
+#define _GNU_SOURCE /* for accept4 and memmem */
 #include <errno.h>
 #include <linux/net.h>
 #include <linux/tcp.h>
@@ -22,7 +22,7 @@
 #define PORT 3000
 #define WORKER_CONNECTIONS 1024
 #define RESPONSE_BODY "Hello, world!\n"
-#define SERVER "origin-c-epoll"
+#define SERVER "toyserver"
 #define HTTP_DATE_BUF_LEN sizeof("Sun, 06 Nov 1994 08:49:37 GMT")
 
 typedef int ngx_int_t;
@@ -42,67 +42,64 @@ typedef enum {
   NGX_TCP_NODELAY_DISABLED
 } ngx_connection_tcp_nodelay_e;
 
-ngx_int_t ngx_strncasecmp(u_char *s1, u_char *s2, size_t n) {
-  ngx_uint_t c1, c2;
-
-  while (n) {
-    c1 = (ngx_uint_t)*s1++;
-    c2 = (ngx_uint_t)*s2++;
-
-    c1 = (c1 >= 'A' && c1 <= 'Z') ? (c1 | 0x20) : c1;
-    c2 = (c2 >= 'A' && c2 <= 'Z') ? (c2 | 0x20) : c2;
-
-    if (c1 == c2) {
-
-      if (c1) {
-        n--;
-        continue;
-      }
-
+static int eq_ignore_ascii_case_literal(char *s, const char *lowcase_literal, int n) {
+  for (int i = 0; i < n; i++) {
+    if ((s[i] | 0x20) != lowcase_literal[i]) {
       return 0;
     }
-
-    return c1 - c2;
   }
-
-  return 0;
+  // printf("eq_ignore_ascii_case_literal returns true for [%.*s]\n", n, lowcase_literal);
+  return 1;
 }
 
-/*
- * ngx_strlcasestrn() is intended to search for static substring
- * with known length in string until the argument last. The argument n
- * must be length of the second substring - 1.
- */
-
-u_char *ngx_strlcasestrn(u_char *s1, u_char *last, u_char *s2, size_t n) {
-  ngx_uint_t c1, c2;
-
-  c2 = (ngx_uint_t)*s2++;
-  c2 = (c2 >= 'A' && c2 <= 'Z') ? (c2 | 0x20) : c2;
-  last -= n;
-
-  do {
-    do {
-      if (s1 >= last) {
-        return NULL;
-      }
-
-      c1 = (ngx_uint_t)*s1++;
-
-      c1 = (c1 >= 'A' && c1 <= 'Z') ? (c1 | 0x20) : c1;
-
-    } while (c1 != c2);
-
-  } while (ngx_strncasecmp(s1, s2, n) != 0);
-
-  return --s1;
+static char *trim_left_space(char *s, int n) {
+  char *end = s + n;
+  while (s < end && *s == ' ') {
+    s++;
+  }
+  return s;
 }
 
-#define CONNECTION_CLOSE "\r\nConnection: close\r\n"
+#define CONNECTION "connection"
+#define CONNECTION_LEN (sizeof(CONNECTION) - 1)
+#define CLOSE "close"
+#define CLOSE_LEN (sizeof(CLOSE) - 1)
 
 static int has_connection_close(char *req, int n) {
-  return ngx_strlcasestrn(req, req + n, CONNECTION_CLOSE,
-                          sizeof(CONNECTION_CLOSE) - 2) != NULL;
+  // printf("has_connection_close start, req=[%.*s]\n", n, req);
+  char *field_end = memmem(req, n, "\r\n", 2);
+  if (field_end == NULL) {
+    return 0;
+  }
+  n -= (field_end - req) + 2;
+  req = field_end + 2;
+  while ((field_end = memmem(req, n, "\r\n", 2)) != NULL) {
+    // printf("=== req=[%.*s], field_end=[%.*s], end_pos=%ld\n", n, req, (int)(n - (field_end - req)), field_end, field_end - req);
+    if (field_end == req) {
+      break;
+    }
+
+    char *colon = memchr(req, ':', field_end - req);
+    // printf("== colon=[%.*s], colon_pos=%ld\n", (int)(n - (colon - req)), colon, colon - req);
+    if (colon != NULL &&
+        colon - req == CONNECTION_LEN &&
+        eq_ignore_ascii_case_literal(req, CONNECTION, CONNECTION_LEN))
+    {
+      // printf("= colon+1=[%.*s]\n", (int)(field_end - colon - 1), colon + 1);
+      char *val = trim_left_space(colon + 1, field_end - colon - 1);
+      int val_len = field_end - val;
+      // printf("val=[%.*s]\n", (int)(field_end - val), val);
+      if (val_len >= CLOSE_LEN &&
+          eq_ignore_ascii_case_literal(val, CLOSE, CLOSE_LEN) &&
+          trim_left_space(val + CLOSE_LEN, val_len - CLOSE_LEN) == field_end) {
+        return 1;
+      }
+    }
+
+    n -= (field_end - req) + 2;
+    req = field_end + 2;
+  }
+  return 0;
 }
 
 static void init_connections(ngx_connection_t *connections,
@@ -186,6 +183,9 @@ void *handle_client(void *arg) {
   char http_date_buf[HTTP_DATE_BUF_LEN];
   int http_date_len;
   time_t now, prev_now = 0;
+  alignas(1024) char buf[BUF_SIZE];
+  struct iovec iov;
+  iov.iov_base = buf;
 
   server_fd = *(int *)arg;
 
@@ -264,7 +264,6 @@ void *handle_client(void *arg) {
           continue;
         }
       } else {
-        alignas(1024) char buf[BUF_SIZE];
         c = events[i].data.ptr;
         client_fd = c->fd;
         n = recvfrom(client_fd, buf, BUF_SIZE, 0, NULL, NULL);
@@ -274,6 +273,7 @@ void *handle_client(void *arg) {
           close_connection(c, &free_connections, &free_connection_n);
         } else {
           closing = has_connection_close(buf, n);
+          // printf("closing=%d\n", closing);
           now = get_now();
           if (now != prev_now) {
             http_date_len = format_http_date(now, http_date_buf);
@@ -284,16 +284,15 @@ void *handle_client(void *arg) {
           }
           int resp_len = snprintf(buf, sizeof(buf),
                                   "HTTP/1.1 200 OK\r\n"
-                                  "Date: %s\r\n"
-                                  "Server: %s\r\n"
+                                  "Date: %.*s\r\n"
+                                  "Server: %.*s\r\n"
                                   "Content-Type: text/plain\r\n"
-                                  "Content-Length: %d\r\n"
+                                  "Content-Length: %ld\r\n"
                                   "\r\n"
                                   "%s",
-                                  http_date_buf, SERVER,
+                                  http_date_len, http_date_buf,
+                                  (int)(sizeof(SERVER) - 1), SERVER,
                                   sizeof(RESPONSE_BODY) - 1, RESPONSE_BODY);
-          struct iovec iov;
-          iov.iov_base = buf;
           iov.iov_len = resp_len;
           if (writev(client_fd, &iov, 1) == -1) {
             perror("writev");

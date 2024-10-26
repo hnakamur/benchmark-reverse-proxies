@@ -1,0 +1,90 @@
+rseq(0x74e3aaa00fe0, 0x20, 0, 0x53053053) = 0
+set_robust_list(0x74e3aaa009a0, 24)     = 0
+rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+epoll_create1(0)                        = 4
+epoll_ctl(4, EPOLL_CTL_ADD, 3, {events=EPOLLIN|EPOLLEXCLUSIVE, data={u32=3, u64=3}}) = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=3, u64=3}}], 512, -1) = 1
+accept4(3, {sa_family=AF_INET, sin_port=htons(55364), sin_addr=inet_addr("127.0.0.1")}, [16], SOCK_NONBLOCK) = 5
+epoll_ctl(4, EPOLL_CTL_DEL, 3, 0x74e3aa9f97b4) = 0
+epoll_ctl(4, EPOLL_CTL_ADD, 3, {events=EPOLLIN|EPOLLEXCLUSIVE, data={u32=3, u64=3}}) = 0
+epoll_ctl(4, EPOLL_CTL_ADD, 5, {events=EPOLLIN|EPOLLRDHUP|EPOLLET, data={u32=2862591968, u64=128521168990176}}) = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=2862591968, u64=128521168990176}}], 512, -1) = 1
+recvfrom(5, "GET / HTTP/1.1\r\naccept: */*\r\nacc"..., 1024, 0, NULL, NULL) = 141
+mmap(NULL, 134217728, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x74e3a2200000
+munmap(0x74e3a2200000, 31457280)        = 0
+munmap(0x74e3a8000000, 35651584)        = 0
+mprotect(0x74e3a4000000, 135168, PROT_READ|PROT_WRITE) = 0
+openat(AT_FDCWD, "/etc/localtime", O_RDONLY|O_CLOEXEC) = 6
+fstat(6, {st_mode=S_IFREG|0644, st_size=309, ...}) = 0
+fstat(6, {st_mode=S_IFREG|0644, st_size=309, ...}) = 0
+read(6, "TZif2\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\4\0\0\0\4\0\0\0\0"..., 512) = 309
+lseek(6, -176, SEEK_CUR)                = 133
+read(6, "TZif2\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\4\0\0\0\4\0\0\0\0"..., 512) = 176
+close(6)                                = 0
+writev(5, [{iov_base="HTTP/1.1 200 OK\r\nDate: Sun, 22 S"..., iov_len=140}], 1) = 140
+close(5)                                = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=3, u64=3}}], 512, -1) = 1
+accept4(3, {sa_family=AF_INET, sin_port=htons(55380), sin_addr=inet_addr("127.0.0.1")}, [16], SOCK_NONBLOCK) = 5
+epoll_ctl(4, EPOLL_CTL_ADD, 5, {events=EPOLLIN|EPOLLRDHUP|EPOLLET, data={u32=2862591968, u64=128521168990176}}) = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=2862591968, u64=128521168990176}}], 512, -1) = 1
+recvfrom(5, "GET / HTTP/1.1\r\naccept: */*\r\nacc"..., 1024, 0, NULL, NULL) = 141
+writev(5, [{iov_base="HTTP/1.1 200 OK\r\nDate: Sun, 22 S"..., iov_len=140}], 1) = 140
+close(5)                                = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=3, u64=3}}], 512, -1) = 1
+accept4(3, {sa_family=AF_INET, sin_port=htons(55392), sin_addr=inet_addr("127.0.0.1")}, [16], SOCK_NONBLOCK) = 5
+epoll_ctl(4, EPOLL_CTL_ADD, 5, {events=EPOLLIN|EPOLLRDHUP|EPOLLET, data={u32=2862591968, u64=128521168990176}}) = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=2862591968, u64=128521168990176}}], 512, -1) = 1
+recvfrom(5, "GET / HTTP/1.1\r\naccept: */*\r\nacc"..., 1024, 0, NULL, NULL) = 141
+writev(5, [{iov_base="HTTP/1.1 200 OK\r\nDate: Sun, 22 S"..., iov_len=140}], 1) = 140
+close(5)                                = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=3, u64=3}}], 512, -1) = 1
+accept4(3, {sa_family=AF_INET, sin_port=htons(55406), sin_addr=inet_addr("127.0.0.1")}, [16], SOCK_NONBLOCK) = 5
+epoll_ctl(4, EPOLL_CTL_ADD, 5, {events=EPOLLIN|EPOLLRDHUP|EPOLLET, data={u32=2862591968, u64=128521168990176}}) = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=2862591968, u64=128521168990176}}], 512, -1) = 1
+recvfrom(5, "GET / HTTP/1.1\r\naccept: */*\r\nacc"..., 1024, 0, NULL, NULL) = 141
+writev(5, [{iov_base="HTTP/1.1 200 OK\r\nDate: Sun, 22 S"..., iov_len=140}], 1) = 140
+close(5)                                = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=3, u64=3}}], 512, -1) = 1
+accept4(3, {sa_family=AF_INET, sin_port=htons(55418), sin_addr=inet_addr("127.0.0.1")}, [16], SOCK_NONBLOCK) = 5
+epoll_ctl(4, EPOLL_CTL_ADD, 5, {events=EPOLLIN|EPOLLRDHUP|EPOLLET, data={u32=2862591968, u64=128521168990176}}) = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=2862591968, u64=128521168990176}}], 512, -1) = 1
+recvfrom(5, "GET / HTTP/1.1\r\naccept: */*\r\nacc"..., 1024, 0, NULL, NULL) = 141
+writev(5, [{iov_base="HTTP/1.1 200 OK\r\nDate: Sun, 22 S"..., iov_len=140}], 1) = 140
+close(5)                                = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=3, u64=3}}], 512, -1) = 1
+accept4(3, {sa_family=AF_INET, sin_port=htons(55428), sin_addr=inet_addr("127.0.0.1")}, [16], SOCK_NONBLOCK) = 5
+epoll_ctl(4, EPOLL_CTL_ADD, 5, {events=EPOLLIN|EPOLLRDHUP|EPOLLET, data={u32=2862591968, u64=128521168990176}}) = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=2862591968, u64=128521168990176}}], 512, -1) = 1
+recvfrom(5, "GET / HTTP/1.1\r\naccept: */*\r\nacc"..., 1024, 0, NULL, NULL) = 141
+writev(5, [{iov_base="HTTP/1.1 200 OK\r\nDate: Sun, 22 S"..., iov_len=140}], 1) = 140
+close(5)                                = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=3, u64=3}}], 512, -1) = 1
+accept4(3, {sa_family=AF_INET, sin_port=htons(55444), sin_addr=inet_addr("127.0.0.1")}, [16], SOCK_NONBLOCK) = 5
+epoll_ctl(4, EPOLL_CTL_ADD, 5, {events=EPOLLIN|EPOLLRDHUP|EPOLLET, data={u32=2862591968, u64=128521168990176}}) = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=2862591968, u64=128521168990176}}], 512, -1) = 1
+recvfrom(5, "GET / HTTP/1.1\r\naccept: */*\r\nacc"..., 1024, 0, NULL, NULL) = 141
+writev(5, [{iov_base="HTTP/1.1 200 OK\r\nDate: Sun, 22 S"..., iov_len=140}], 1) = 140
+close(5)                                = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=3, u64=3}}], 512, -1) = 1
+accept4(3, {sa_family=AF_INET, sin_port=htons(55446), sin_addr=inet_addr("127.0.0.1")}, [16], SOCK_NONBLOCK) = 5
+epoll_ctl(4, EPOLL_CTL_ADD, 5, {events=EPOLLIN|EPOLLRDHUP|EPOLLET, data={u32=2862591968, u64=128521168990176}}) = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=2862591968, u64=128521168990176}}], 512, -1) = 1
+recvfrom(5, "GET / HTTP/1.1\r\naccept: */*\r\nacc"..., 1024, 0, NULL, NULL) = 141
+writev(5, [{iov_base="HTTP/1.1 200 OK\r\nDate: Sun, 22 S"..., iov_len=140}], 1) = 140
+close(5)                                = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=3, u64=3}}], 512, -1) = 1
+accept4(3, {sa_family=AF_INET, sin_port=htons(55450), sin_addr=inet_addr("127.0.0.1")}, [16], SOCK_NONBLOCK) = 5
+epoll_ctl(4, EPOLL_CTL_ADD, 5, {events=EPOLLIN|EPOLLRDHUP|EPOLLET, data={u32=2862591968, u64=128521168990176}}) = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=2862591968, u64=128521168990176}}], 512, -1) = 1
+recvfrom(5, "GET / HTTP/1.1\r\naccept: */*\r\nacc"..., 1024, 0, NULL, NULL) = 141
+writev(5, [{iov_base="HTTP/1.1 200 OK\r\nDate: Sun, 22 S"..., iov_len=140}], 1) = 140
+close(5)                                = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=3, u64=3}}], 512, -1) = 1
+accept4(3, {sa_family=AF_INET, sin_port=htons(55462), sin_addr=inet_addr("127.0.0.1")}, [16], SOCK_NONBLOCK) = 5
+epoll_ctl(4, EPOLL_CTL_ADD, 5, {events=EPOLLIN|EPOLLRDHUP|EPOLLET, data={u32=2862591968, u64=128521168990176}}) = 0
+epoll_wait(4, [{events=EPOLLIN, data={u32=2862591968, u64=128521168990176}}], 512, -1) = 1
+recvfrom(5, "GET / HTTP/1.1\r\naccept: */*\r\nacc"..., 1024, 0, NULL, NULL) = 141
+writev(5, [{iov_base="HTTP/1.1 200 OK\r\nDate: Sun, 22 S"..., iov_len=140}], 1) = 140
+close(5)                                = 0
+epoll_wait(4,  <unfinished ...>)        = ?
++++ killed by SIGINT +++
