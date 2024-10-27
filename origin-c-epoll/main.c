@@ -42,9 +42,9 @@ typedef enum {
   NGX_TCP_NODELAY_DISABLED
 } ngx_connection_tcp_nodelay_e;
 
-static char *trim_left_space(char *s, int n) {
+static char *skip_ows(char *s, int n) {
   char *end = s + n;
-  while (s < end && *s == ' ') {
+  while (s < end && (*s == ' ' || *s == '\t')) {
     s++;
   }
   return s;
@@ -92,7 +92,7 @@ static int has_connection_close(char *req, int n) {
     {
       // printf("= colon+1=[%.*s]\n", (int)(field_end - colon - 1), colon + 1);
       p += CONNECTION_LEN + 1;
-      p = trim_left_space(p, field_end - p);
+      p = skip_ows(p, field_end - p);
       // printf("val=[%.*s]\n", (int)(field_end - val), val);
       int val_len = field_end - p;
       if (p + CLOSE_LEN <= field_end &&
@@ -101,7 +101,7 @@ static int has_connection_close(char *req, int n) {
           (p[2] | 0x20) == 'o' &&
           (p[3] | 0x20) == 's' &&
           (p[4] | 0x20) == 'e' &&
-          trim_left_space(p + CLOSE_LEN, val_len - CLOSE_LEN) == field_end)
+          skip_ows(p + CLOSE_LEN, val_len - CLOSE_LEN) == field_end)
       {
         return 1;
       }
