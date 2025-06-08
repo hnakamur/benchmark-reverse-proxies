@@ -22,7 +22,7 @@ fn main() {
     let origins = [
         // Server::Rust(String::from("origin-actix")),
         // Server::Nginx(String::from("origin-nginx")),
-        Server::Rust(String::from("origin-c-epoll")),
+        // Server::Rust(String::from("origin-c-epoll")),
         // Server::MultiProcess(String::from("origin-c-epoll-mp")),
         // Server::Rust(String::from("origin-c-sync")),
         // Server::Rust(String::from("origin-heph")),
@@ -31,7 +31,7 @@ fn main() {
         // Server::Rust(String::from("origin-ntex")),
         // Server::Rust(String::from("origin-monoio")),
         // Server::Rust(String::from("origin-pingora")),
-        // Server::Rust(String::from("origin-tokio")),
+        Server::Rust(String::from("origin-tokio")),
         // Server::Rust(String::from("origin-toysync")),
         // Server::Zig(String::from("origin-zap")),
     ];
