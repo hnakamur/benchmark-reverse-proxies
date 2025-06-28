@@ -20,7 +20,7 @@ fn main() {
     cpu_power("performance").unwrap();
 
     let origins = [
-        Server::Rust(String::from("origin-actix")),
+        // Server::Rust(String::from("origin-actix")),
         // Server::Nginx(String::from("origin-nginx")),
         // Server::Rust(String::from("origin-c-epoll")),
         // Server::MultiProcess(String::from("origin-c-epoll-mp")),
@@ -28,7 +28,7 @@ fn main() {
         // Server::Rust(String::from("origin-heph")),
         // Server::Rust(String::from("origin-hyper")),
         // Server::Rust(String::from("origin-liburing")),
-        // Server::Rust(String::from("origin-ntex")),
+        Server::Rust(String::from("origin-ntex")),
         // Server::Rust(String::from("origin-monoio")),
         // Server::Rust(String::from("origin-pingora")),
         // Server::Rust(String::from("origin-tokio")),
