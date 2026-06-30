@@ -194,7 +194,8 @@ fn run_curl<P: AsRef<Path>>(url: &str, output_dir: P) -> Result<(), DynError> {
 fn run_oha<P: AsRef<Path>>(url: &str, output_dir: P, keepalive: bool) -> Result<(), DynError> {
     let mut args = vec![
         "--no-tui",
-        "--json",
+        "--output-format",
+        "json",
         "-c",
         "100",
         "-z",
