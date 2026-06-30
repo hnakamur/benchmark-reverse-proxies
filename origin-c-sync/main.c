@@ -156,7 +156,7 @@ void *handle_client(void *arg) {
                     "Date: %s\r\n"
                     "Server: %s\r\n"
                     "Content-Type: text/plain\r\n"
-                    "Content-Length: %d\r\n"
+                    "Content-Length: %zu\r\n"
                     "\r\n"
                     "%s",
                     http_date_buf,

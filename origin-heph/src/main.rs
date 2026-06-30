@@ -5,14 +5,14 @@ use std::io;
 use std::time::Duration;
 
 use heph::actor::{self, actor_fn};
-use heph::supervisor::SupervisorStrategy;
+use heph::supervisor::{Supervisor, SupervisorStrategy};
 use heph_http::body::OneshotBody;
-use heph_http::{self as http, server, Header, HeaderName, Headers, Method, StatusCode};
-use heph_rt::net::TcpStream;
+use heph_http::{self as http, HeaderName, Headers, Method, StatusCode};
+use heph_rt::fd::AsyncFd;
 use heph_rt::spawn::options::{ActorOptions, Priority};
 use heph_rt::timer::Deadline;
 use heph_rt::{Runtime, ThreadLocal};
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 
 fn main() -> Result<(), heph_rt::Error> {
     // Enable logging.
@@ -20,13 +20,13 @@ fn main() -> Result<(), heph_rt::Error> {
 
     let actor = actor_fn(http_actor);
     let address = "0.0.0.0:3000".parse().unwrap();
-    let server = server::setup(address, conn_supervisor, actor, ActorOptions::default())
+    let server = http::server::Server::new(address, conn_supervisor, actor, ActorOptions::default())
         .map_err(heph_rt::Error::setup)?;
 
     let mut runtime = Runtime::setup().use_all_cores().build()?;
     runtime.run_on_workers(move |mut runtime_ref| -> io::Result<()> {
         let options = ActorOptions::default().with_priority(Priority::LOW);
-        let server_ref = runtime_ref.spawn_local(server_supervisor, server, (), options);
+        let server_ref = runtime_ref.try_spawn_local(ServerSupervisor, server, (), options)?;
 
         runtime_ref.receive_signals(server_ref.try_map());
         Ok(())
@@ -35,20 +35,32 @@ fn main() -> Result<(), heph_rt::Error> {
     runtime.start()
 }
 
-fn server_supervisor(err: server::Error<!>) -> SupervisorStrategy<()> {
-    match err {
-        // When we hit an error accepting a connection we'll drop the old
-        // server and create a new one.
-        server::Error::Accept(err) => {
-            error!("error accepting new connection: {err}");
-            SupervisorStrategy::Restart(())
-        }
-        // Async function never return an error creating a new actor.
-        server::Error::NewActor(_) => unreachable!(),
+/// Supervisor for the HTTP server actor.
+#[derive(Copy, Clone, Debug)]
+struct ServerSupervisor;
+
+impl<NA> Supervisor<NA> for ServerSupervisor
+where
+    NA: heph::NewActor<Argument = ()>,
+    NA::Error: std::fmt::Display,
+    <NA::Actor as heph::Actor>::Error: std::fmt::Display,
+{
+    fn decide(&mut self, err: <NA::Actor as heph::Actor>::Error) -> SupervisorStrategy<()> {
+        error!("HTTP server failed: {err}");
+        SupervisorStrategy::Restart(())
+    }
+
+    fn decide_on_restart_error(&mut self, err: NA::Error) -> SupervisorStrategy<()> {
+        error!("HTTP server failed to restart: {err}");
+        SupervisorStrategy::Restart(())
+    }
+
+    fn second_restart_error(&mut self, err: NA::Error) {
+        error!("HTTP server failed to restart a second time: {err}");
     }
 }
 
-fn conn_supervisor(err: io::Error) -> SupervisorStrategy<TcpStream> {
+fn conn_supervisor(err: io::Error) -> SupervisorStrategy<AsyncFd> {
     error!("error handling connection: {err}");
     SupervisorStrategy::Stop
 }
@@ -61,9 +73,8 @@ async fn http_actor(
     ctx: actor::Context<!, ThreadLocal>,
     mut connection: http::Connection,
 ) -> io::Result<()> {
-    let address = connection.peer_addr()?;
+    let address = connection.peer_addr().await?;
     // info!("accepted connection: source={address}");
-    connection.set_nodelay(true)?;
 
     let mut read_timeout = READ_TIMEOUT;
     let mut headers = Headers::EMPTY;
@@ -79,7 +90,7 @@ async fn http_actor(
                 if request.path() != "/" {
                     (StatusCode::NOT_FOUND, "Not found".into(), false)
                 } else if !matches!(request.method(), Method::Get | Method::Head) {
-                    headers.append(Header::new(HeaderName::ALLOW, b"GET, HEAD"));
+                    headers.append(HeaderName::ALLOW, b"GET, HEAD" as &[u8]).unwrap();
                     let body = "Method not allowed".into();
                     (StatusCode::METHOD_NOT_ALLOWED, body, false)
                 } else if !request.body().is_empty() {
@@ -100,10 +111,10 @@ async fn http_actor(
             }
         };
 
-        headers.append(Header::new(HeaderName::SERVER, b"heph"));
+        headers.append(HeaderName::SERVER, b"heph" as &[u8]).unwrap();
 
         if should_close {
-            headers.append(Header::new(HeaderName::CONNECTION, b"close"));
+            headers.append(HeaderName::CONNECTION, b"close" as &[u8]).unwrap();
         }
 
         let body = OneshotBody::new(body);

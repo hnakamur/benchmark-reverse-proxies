@@ -1,71 +1,80 @@
 {
   "summary": {
-    "successRate": 1.0,
-    "total": 15.000990189,
-    "slowest": 0.040727542,
-    "fastest": 0.000057546,
-    "average": 0.0002500270446260526,
-    "requestsPerSec": 398635.28504838224,
-    "totalData": 83717536,
-    "sizePerRequest": 14,
-    "sizePerSec": 5580800.663504787
+    "successRate": 0.0,
+    "total": 15.003570305,
+    "slowest": null,
+    "fastest": null,
+    "average": null,
+    "requestsPerSec": 1764280.2654231305,
+    "totalData": 0,
+    "sizePerRequest": null,
+    "sizePerSec": 0.0
   },
   "responseTimeHistogram": {
-    "0.000057546": 1,
-    "0.0041245456000000005": 5979744,
-    "0.0081915452": 0,
-    "0.012258544800000002": 0,
-    "0.0163255444": 0,
-    "0.020392544": 0,
-    "0.0244595436": 0,
-    "0.0285265432": 0,
-    "0.0325935428": 0,
-    "0.0366605424": 0,
-    "0.040727542": 79
+    "NaN": 0
   },
   "latencyPercentiles": {
-    "p10": 0.000175162,
-    "p25": 0.000204022,
-    "p50": 0.000240111,
-    "p75": 0.000281282,
-    "p90": 0.00032604,
-    "p95": 0.000361166,
-    "p99": 0.000523506,
-    "p99.9": 0.000801126,
-    "p99.99": 0.001002158
+    "p10": null,
+    "p25": null,
+    "p50": null,
+    "p75": null,
+    "p90": null,
+    "p95": null,
+    "p99": null,
+    "p99.9": null,
+    "p99.99": null
+  },
+  "firstByteHistogram": {
+    "NaN": 0
+  },
+  "firstBytePercentiles": {
+    "p10": null,
+    "p25": null,
+    "p50": null,
+    "p75": null,
+    "p90": null,
+    "p95": null,
+    "p99": null,
+    "p99.9": null,
+    "p99.99": null
   },
   "rps": {
-    "mean": 399442.9575790342,
-    "stddev": 14375.802493842928,
-    "max": 420007.3538796274,
+    "mean": null,
+    "stddev": null,
+    "max": null,
+    "min": null,
     "percentiles": {
-      "p10": 386172.021081931,
-      "p25": 394004.09412074735,
-      "p50": 401133.7379882747,
-      "p75": 406768.646280765,
-      "p90": 410825.34792395664,
-      "p95": 413611.93475535314,
-      "p99": 417260.54450500436,
-      "p99.9": 419711.81391113857,
-      "p99.99": 420007.3538796274
+      "p10": null,
+      "p25": null,
+      "p50": null,
+      "p75": null,
+      "p90": null,
+      "p95": null,
+      "p99": null,
+      "p99.9": null,
+      "p99.99": null
     }
   },
   "details": {
     "DNSDialup": {
-      "average": 0.00011793545154054226,
-      "fastest": 0.000012334,
-      "slowest": 0.040502269
+      "average": null,
+      "fastest": null,
+      "slowest": null
     },
     "DNSLookup": {
-      "average": 1.966839947965189e-6,
-      "fastest": 1.099e-6,
-      "slowest": 0.000881356
+      "average": null,
+      "fastest": null,
+      "slowest": null
+    },
+    "firstByte": {
+      "average": null,
+      "fastest": null,
+      "slowest": null
     }
   },
-  "statusCodeDistribution": {
-    "200": 5979824
-  },
+  "statusCodeDistribution": {},
   "errorDistribution": {
-    "aborted due to deadline": 100
+    "Connection refused (os error 111)": 26470438,
+    "aborted due to deadline": 65
   }
 }

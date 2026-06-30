@@ -1,8 +1,9 @@
 HTTP/1.1 200 OK
-server: hyper
-date: Sat, 28 Jun 2025 13:46:58 GMT
-content-type: text/plain
-content-length: 14
 connection: keep-alive
+server: hyper
+content-type: text/plain
+content-length: 13
+date: Tue, 30 Jun 2026 14:05:44 GMT
+last-modified: Tue, 30 Jun 2026 14:05:44 GMT
 
-Hello, world!
+Hello world!

@@ -20,20 +20,20 @@ fn main() {
     cpu_power("performance").unwrap();
 
     let origins = [
-        // Server::Rust(String::from("origin-actix")),
-        // Server::Nginx(String::from("origin-nginx")),
-        // Server::Rust(String::from("origin-c-epoll")),
-        // Server::MultiProcess(String::from("origin-c-epoll-mp")),
-        // Server::Rust(String::from("origin-c-sync")),
-        // Server::Rust(String::from("origin-heph")),
-        // Server::Rust(String::from("origin-hyper")),
-        // Server::Rust(String::from("origin-liburing")),
+        Server::Rust(String::from("origin-actix")),
+        Server::Nginx(String::from("origin-nginx")),
+        Server::Rust(String::from("origin-c-epoll")),
+        Server::MultiProcess(String::from("origin-c-epoll-mp")),
+        Server::Rust(String::from("origin-c-sync")),
+        Server::Rust(String::from("origin-heph")),
+        Server::Rust(String::from("origin-hyper")),
+        Server::Rust(String::from("origin-liburing")),
         Server::Rust(String::from("origin-ntex")),
-        // Server::Rust(String::from("origin-monoio")),
-        // Server::Rust(String::from("origin-pingora")),
-        // Server::Rust(String::from("origin-tokio")),
-        // Server::Rust(String::from("origin-toysync")),
-        // Server::Zig(String::from("origin-zap")),
+        Server::Rust(String::from("origin-monoio")),
+        Server::Rust(String::from("origin-pingora")),
+        Server::Rust(String::from("origin-tokio")),
+        Server::Rust(String::from("origin-toysync")),
+        Server::Zig(String::from("origin-zap")),
     ];
     for origin in origins {
         bench_http_origin(&origin).unwrap();
@@ -41,9 +41,9 @@ fn main() {
 
     let proxies = [
         Server::Rust(String::from("proxy-actix")),
-        // Server::Rust(String::from("proxy-hyper")),
-        // Server::Rust(String::from("proxy-pingora")),
-        // Server::Nginx(String::from("proxy-nginx")),
+        Server::Rust(String::from("proxy-hyper")),
+        Server::Rust(String::from("proxy-pingora")),
+        Server::Nginx(String::from("proxy-nginx")),
     ];
     let origin = Server::Nginx(String::from("origin-nginx"));
     for proxy in proxies {

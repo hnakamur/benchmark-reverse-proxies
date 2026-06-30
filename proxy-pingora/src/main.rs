@@ -1,7 +1,7 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use async_trait::async_trait;
-use pingora::{http::ResponseHeader, server::Server, services::Service, upstreams::peer::HttpPeer};
+use pingora::{http::ResponseHeader, server::Server, services::ServiceWithDependents, upstreams::peer::HttpPeer};
 use pingora_core::Result;
 use pingora_proxy::{ProxyHttp, Session};
 
@@ -36,7 +36,7 @@ fn main() {
         pingora_proxy::http_proxy_service(&my_server.configuration, MyProxy);
     echo_service_http.add_tcp("0.0.0.0:3001");
 
-    let services: Vec<Box<dyn Service>> = vec![Box::new(echo_service_http)];
+    let services: Vec<Box<dyn ServiceWithDependents>> = vec![Box::new(echo_service_http)];
     my_server.add_services(services);
     my_server.run_forever();
 }

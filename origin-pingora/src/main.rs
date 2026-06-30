@@ -6,7 +6,7 @@ use pingora::{
     apps::ServerApp,
     protocols::Stream,
     server::{Server, ShutdownWatch},
-    services::{listening::Service as ListeningService, Service},
+    services::listening::Service as ListeningService,
 };
 use tokio::io::AsyncWriteExt;
 
@@ -50,7 +50,6 @@ fn main() {
     let mut hello_service = hello_service();
     hello_service.add_tcp("0.0.0.0:3000");
 
-    let services: Vec<Box<dyn Service>> = vec![Box::new(hello_service)];
-    my_server.add_services(services);
+    my_server.add_service(hello_service);
     my_server.run_forever();
 }

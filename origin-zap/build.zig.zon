@@ -1,12 +1,19 @@
 .{
-    .name = "My example project",
+    .name = .origin_zap,
     .version = "0.0.1",
+    .fingerprint = 0x73945b35f8196967,
+    .minimum_zig_version = "0.16.0",
 
     .dependencies = .{
-        // zap v0.6.0
         .zap = .{
-            .url = "https://github.com/zigzap/zap/archive/refs/tags/v0.6.0.tar.gz",
-            .hash = "1220a5a1e6b18fa384d8a98e5d5a25720ddadbcfed01da2e4ca55c7cfb3dc1caa62a",
-        }
-    }
+            .url = "https://github.com/zigzap/zap/archive/refs/heads/master.tar.gz",
+            .hash = "zap-0.10.6-GoeB8y-IJAD3m9zkAkeTQalzU1NuvO072u8hA78Irdp8",
+        },
+    },
+
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
 }
