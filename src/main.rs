@@ -29,7 +29,6 @@ fn main() {
         Server::Rust(String::from("origin-hyper")),
         Server::Rust(String::from("origin-liburing")),
         Server::Rust(String::from("origin-ntex")),
-        Server::Rust(String::from("origin-monoio")),
         Server::Rust(String::from("origin-pingora")),
         Server::Rust(String::from("origin-tokio")),
         Server::Rust(String::from("origin-toysync")),
