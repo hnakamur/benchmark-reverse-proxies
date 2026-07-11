@@ -33,7 +33,6 @@ fn main() {
         Server::Rust(String::from("origin-pingora")),
         Server::Rust(String::from("origin-tokio")),
         Server::Rust(String::from("origin-toysync")),
-        Server::Zig(String::from("origin-zap")),
     ];
     for origin in origins {
         bench_http_origin(&origin).unwrap();
